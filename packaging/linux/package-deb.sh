@@ -13,7 +13,10 @@ echo "==> 1. Building DidYouDoIt desktop JAR..."
 cd "${APP_DIR}"
 ./mvnw clean package -DskipTests
 
-JAR_FILE=$(find target -name "DidYouDoIt-*.jar" | head -n 1)
+JAR_FILE="${APP_DIR}/target/DidYouDoIt-1.0-SNAPSHOT-all.jar"
+if [ ! -f "${JAR_FILE}" ]; then
+  JAR_FILE=$(find target -name "DidYouDoIt-*.jar" | head -n 1)
+fi
 JAR_NAME=$(basename "${JAR_FILE}")
 
 echo "==> 2. Preparing output directory..."
@@ -26,7 +29,7 @@ jpackage \
   --type deb \
   --input "${APP_DIR}/target" \
   --main-jar "${JAR_NAME}" \
-  --main-class "com.aarav.didyoudoit.DidYouDoItApp" \
+  --main-class "com.aarav.didyoudoit.Main" \
   --name "didyoudoit" \
   --app-version "${APP_VERSION}" \
   --vendor "Aarav" \

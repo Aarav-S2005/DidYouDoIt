@@ -14,10 +14,14 @@ echo "==> 1. Building DidYouDoIt desktop JAR..."
 cd "${APP_DIR}"
 ./mvnw clean package -DskipTests
 
-JAR_FILE=$(find target -name "DidYouDoIt-*.jar" | head -n 1)
+JAR_FILE="${APP_DIR}/target/DidYouDoIt-1.0-SNAPSHOT-all.jar"
+if [ ! -f "${JAR_FILE}" ]; then
+  JAR_FILE=$(find target -name "DidYouDoIt-*.jar" | head -n 1)
+fi
 JAR_NAME=$(basename "${JAR_FILE}")
 
 mkdir -p "${OUTPUT_DIR}"
+rm -rf "${OUTPUT_DIR}/didyoudoit"
 ICON_FILE="${APP_DIR}/src/main/resources/icons/app-icon.png"
 
 echo "==> 2. Generating standalone portable app image directory..."
@@ -25,7 +29,7 @@ jpackage \
   --type app-image \
   --input "${APP_DIR}/target" \
   --main-jar "${JAR_NAME}" \
-  --main-class "com.aarav.didyoudoit.DidYouDoItApp" \
+  --main-class "com.aarav.didyoudoit.Main" \
   --name "didyoudoit" \
   --app-version "${APP_VERSION}" \
   --icon "${ICON_FILE}" \
