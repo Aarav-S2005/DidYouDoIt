@@ -76,9 +76,8 @@ pnpm dev             # Launch Vite dev server
 - **Linux Packages**:
   ```bash
   cd packaging/linux
-  ./package-deb.sh      # Debian / Ubuntu / Mint
-  ./package-rpm.sh      # Fedora / RHEL / openSUSE
-  ./package-tarball.sh  # Universal portable .tar.gz
+  ./package-deb.sh      # Debian / Ubuntu / Mint (.deb)
+  ./package-tarball.sh  # Universal portable (.tar.gz) for Fedora, Arch, and all distros
   ```
 
 ---
@@ -87,10 +86,9 @@ pnpm dev             # Launch Vite dev server
 
 | OS / Distribution | Supported Formats | Engine Integration |
 |---|---|---|
-| **Windows 10 / 11** | `.msi`, `.exe` | Windows System Tray, Registry Run Auto-start, Action Center Toasts |
+| **Windows 10 / 11** | `.exe`, `.msi` | Windows System Tray, Registry Run Auto-start, Action Center Toasts |
 | **Debian / Ubuntu / Mint** | `.deb` | XDG Autostart (`.desktop`), Freedesktop `notify-send`, AppIndicator |
-| **Fedora / RHEL / openSUSE** | `.rpm` | XDG Autostart (`.desktop`), Freedesktop `notify-send`, AppIndicator |
-| **Arch / Manjaro / Any Linux** | Portable `.tar.gz` | Zero-dependency bundled JRE, double-click execution |
+| **Fedora, Arch, Any Linux** | Portable `.tar.gz` | Zero-dependency bundled JRE, double-click / CLI execution |
 
 ---
 

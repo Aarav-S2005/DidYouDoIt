@@ -368,12 +368,8 @@ export function App() {
                     <span>Debian / Ubuntu / Mint</span>
                     <span className="download-ext">.deb</span>
                   </a>
-                  <a href={getDownloadUrl('rpm')} target="_blank" rel="noreferrer" className="download-btn-item">
-                    <span>Fedora / RHEL / openSUSE</span>
-                    <span className="download-ext">.rpm</span>
-                  </a>
                   <a href={getDownloadUrl('gz')} target="_blank" rel="noreferrer" className="download-btn-item">
-                    <span>Universal Portable Archive</span>
+                    <span>Universal Portable Archive (Fedora, Arch, etc.)</span>
                     <span className="download-ext">.tar.gz</span>
                   </a>
                 </div>
