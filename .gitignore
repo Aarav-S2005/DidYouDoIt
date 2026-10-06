@@ -37,3 +37,22 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+### Build & Packaging Artifacts ###
+packaging/**/output/
+packaging/**/staging/
+packaging/**/*.zip
+packaging/**/*.msi
+packaging/**/*.exe
+packaging/**/*.deb
+packaging/**/*.rpm
+packaging/**/*.tar.gz
+
+### Maven Shade & Runtime Logs ###
+app/dependency-reduced-pom.xml
+*.log
+
+### Frontend ###
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/

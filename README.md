@@ -62,9 +62,24 @@ pnpm install
 pnpm dev             # Launch Vite dev server
 ```
 
-### 3. Generate Installers (`packaging/`)
-- **Windows**: `cd packaging/windows && .\package-windows.ps1 -PackageType msi`
-- **Linux**: `cd packaging/linux && ./package-deb.sh` (or `./package-tarball.sh`)
+### 3. Generate Installers & Standalone Packages (`packaging/`)
+- **Windows Standalone & Portable Zip**:
+  ```powershell
+  cd packaging/windows
+  .\package-windows.ps1 -PackageType app-image
+  ```
+- **Windows MSI Installer** (requires WiX 3.x installed):
+  ```powershell
+  cd packaging/windows
+  .\package-windows.ps1 -PackageType msi
+  ```
+- **Linux Packages**:
+  ```bash
+  cd packaging/linux
+  ./package-deb.sh      # Debian / Ubuntu / Mint
+  ./package-rpm.sh      # Fedora / RHEL / openSUSE
+  ./package-tarball.sh  # Universal portable .tar.gz
+  ```
 
 ---
 
