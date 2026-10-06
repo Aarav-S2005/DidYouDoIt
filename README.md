@@ -1,99 +1,89 @@
-# DidYouDoIt? - Personal Accountability & Habit-Nagging System
+# DidYouDoIt? 🎯
 
-> The desktop accountability app that doesn't just record your tasks — it makes sure you actually do them.
+> **Most to-do lists just sit there quietly while deadlines slip away. DidYouDoIt? makes sure you actually finish them.**
 
----
+DidYouDoIt? is a personal accountability desktop app for **Windows and Linux**. Instead of acting like another passive digital notebook where tasks go to be forgotten, it acts like an honest, persistent companion sitting in your system tray—checking in on your schedule, keeping you focused, and escalating reminders until your work is done.
 
-## 📁 Repository Structure
-
-```
-DidYouDoIt/
-│
-├── app/                    # Java desktop application (JavaFX 21 + SQLite)
-│   ├── src/
-│   │   ├── main/
-│   │   │   ├── java/
-│   │   │   └── resources/
-│   │   └── test/
-│   ├── pom.xml
-│   └── README.md
-│
-├── frontend/               # Download & landing website (React + Vite + TypeScript)
-│   ├── src/
-│   ├── public/
-│   ├── package.json
-│   └── ...
-│
-├── packaging/              # Native OS packaging scripts (jpackage)
-│   ├── windows/            # MSI / EXE installer scripts & WiX config
-│   │   ├── package-windows.ps1
-│   │   └── README.md
-│   └── linux/              # .deb, .rpm, and universal tarball scripts
-│       ├── package-deb.sh
-│       ├── package-rpm.sh
-│       ├── package-tarball.sh
-│       └── README.md
-│
-├── .github/
-│   └── workflows/          # GitHub Actions automated build pipelines
-│       ├── build-windows.yml
-│       └── build-linux.yml
-│
-├── REQUIREMENTS.md         # Single source of truth for all requirements
-├── AGENTS.md               # Architecture governance & paired workflow rules
-└── README.md
-```
+🌐 **Website & Live Demo:** [did-you-do-it-app.vercel.app](https://did-you-do-it-app.vercel.app/)
 
 ---
 
-## ⚡ Quick Start
+## 💡 The Problem with Traditional To-Do Apps
 
-### 1. Run the Desktop App (`app/`)
-```bash
-cd app
-./mvnw test          # Run 59 automated unit tests
-./mvnw javafx:run    # Launch application in development mode
-```
+We have all done this:
+1. Open a fancy to-do list.
+2. Carefully organize 10 important goals for the week.
+3. Close the window.
+4. Completely forget about them while spending the afternoon browsing distractions.
 
-### 2. Run the Download Landing Website (`frontend/`)
-```bash
-cd frontend
-pnpm install
-pnpm dev             # Launch Vite dev server
-```
+Traditional productivity apps rely entirely on **your own motivation** to open them back up. When you get distracted or procrastinate, they stay silent.
 
-### 3. Generate Installers & Standalone Packages (`packaging/`)
-- **Windows Standalone & Portable Zip**:
-  ```powershell
-  cd packaging/windows
-  .\package-windows.ps1 -PackageType app-image
-  ```
-- **Windows MSI Installer** (requires WiX 3.x installed):
-  ```powershell
-  cd packaging/windows
-  .\package-windows.ps1 -PackageType msi
-  ```
-- **Linux Packages**:
+**DidYouDoIt? flips this around.** You tell it what you need to do and when, and it takes responsibility for keeping you honest.
+
+---
+
+## ✨ Key Features
+
+### 1. 🔔 Persistent Accountability Daemon
+DidYouDoIt? doesn't disappear when you close its window. It lives quietly in your system tray or menu bar:
+- Watches your due dates in the background with near-zero CPU and memory usage.
+- Sends native desktop notifications the moment a task is due.
+- If a task is ignored, reminders don't just disappear—they gradually escalate in urgency until you either complete the task or consciously snooze it.
+
+### 2. 🎭 4 Distinct Nagging Personalities
+Everyone responds to accountability differently. Pick the voice that actually gets you moving:
+- **🌱 Gentle (Mindful & Supportive):** Empathetic nudges that encourage you with warmth and positivity.
+- **📋 Strict (Military Discipline):** Clear, objective, no-nonsense reminders focused purely on execution and punctuality.
+- **😏 Sarcastic (Witty Reality Checks):** Playful roasts and humorous call-outs to snap you out of doomscrolling.
+- **🔥 Aggressive (High Stakes & High Energy):** Urgent, intense wake-up calls designed for when excuses need to stop immediately.
+
+Each personality features **over 40–50 unique randomized variations per tier**, so your notifications always feel fresh and unpredictable.
+
+### 3. 🌙 Respects Your Downtime (Quiet Hours)
+Accountability doesn't mean burnout. Configure your custom daily Quiet Hours (e.g., `10:00 PM – 7:00 AM`). During these hours, all notifications and pop-ups pause completely so you can sleep or relax undisturbed.
+
+### 4. 🔒 100% Private & Fully Offline
+- **No accounts or sign-ups.**
+- **No cloud servers or monthly subscriptions.**
+- **Zero data collection or tracking.**
+All tasks, routines, and completion histories are stored exclusively on your own computer in a local database. It works perfectly without an internet connection.
+
+### 5. 📊 Real Progress & Consistency Streaks
+Track how consistent you really are over time with clear completion streaks, overdue breakdowns, and category tags.
+
+---
+
+## 💻 Download & Installation
+
+Visit the [Download Website](https://did-you-do-it-app.vercel.app/) or grab the latest release from the [GitHub Releases](https://github.com/Aarav-S2005/DidYouDoIt/releases) page:
+
+### Windows 10 / 11
+- Download `DidYouDoIt-Windows-Portable-v1.0.0.zip`.
+- Extract the zip anywhere on your PC.
+- Double-click `DidYouDoIt.exe` to run. (No Java installation required—everything is self-contained!)
+
+### Linux
+- **Debian / Ubuntu / Mint / Pop!_OS:**
   ```bash
-  cd packaging/linux
-  ./package-deb.sh      # Debian / Ubuntu / Mint (.deb)
-  ./package-tarball.sh  # Universal portable (.tar.gz) for Fedora, Arch, and all distros
+  sudo apt install ./didyoudoit_1.0.0_amd64.deb
+  ```
+- **Fedora, Arch, openSUSE & Universal Tarball:**
+  ```bash
+  tar -xzvf didyoudoit-1.0.0-linux-x64.tar.gz
+  cd didyoudoit
+  ./bin/didyoudoit
   ```
 
 ---
 
-## 💻 Cross-Platform Distribution Matrix
+## 🛠️ Built With
 
-| OS / Distribution | Supported Formats | Engine Integration |
-|---|---|---|
-| **Windows 10 / 11** | Portable `.zip` (contains `DidYouDoIt.exe`) | Windows System Tray, Registry Run Auto-start, Action Center Toasts |
-| **Debian / Ubuntu / Mint** | `.deb` | XDG Autostart (`.desktop`), Freedesktop `notify-send`, AppIndicator |
-| **Fedora, Arch, Any Linux** | Portable `.tar.gz` | Zero-dependency bundled JRE, double-click / CLI execution |
+- **Desktop Application:** Modern JavaFX & local SQLite.
+- **Landing Website:** React 19, TypeScript, Vite & Vanilla CSS.
+- **Packaging:** Native JDK `jpackage` bundling self-contained runtimes for Windows and Linux.
 
 ---
 
-## 🔒 Governance & Architectural Invariants
+## 📄 License
 
-1. **Pure JavaFX**: Zero FXML, zero Scene Builder. Pure Java code styled with a central Theme system.
-2. **Offline-First & Privacy-Focused**: Local SQLite with WAL mode; zero cloud telemetry or unexpected background network egress.
-3. **Escalation Engine**: Dynamic priority-scaled nagging across 4 distinct personality styles (Gentle, Strict, Sarcastic, Aggressive) with over 160 randomized copy variants.
+Free and open source under the MIT License.
