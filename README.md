@@ -86,7 +86,7 @@ pnpm dev             # Launch Vite dev server
 
 | OS / Distribution | Supported Formats | Engine Integration |
 |---|---|---|
-| **Windows 10 / 11** | `.exe`, `.msi` | Windows System Tray, Registry Run Auto-start, Action Center Toasts |
+| **Windows 10 / 11** | Portable `.zip` (contains `DidYouDoIt.exe`) | Windows System Tray, Registry Run Auto-start, Action Center Toasts |
 | **Debian / Ubuntu / Mint** | `.deb` | XDG Autostart (`.desktop`), Freedesktop `notify-send`, AppIndicator |
 | **Fedora, Arch, Any Linux** | Portable `.tar.gz` | Zero-dependency bundled JRE, double-click / CLI execution |
 

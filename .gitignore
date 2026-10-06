@@ -56,3 +56,5 @@ app/dependency-reduced-pom.xml
 frontend/node_modules/
 frontend/dist/
 frontend/dist-ssr/
+
+AGENTS.md
