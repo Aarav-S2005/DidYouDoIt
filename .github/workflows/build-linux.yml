@@ -1,0 +1,79 @@
+name: Build Linux Packages (.deb, .rpm, tarball)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Install Packaging Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fakeroot rpm libasound2 libx11-6 libxext6 libxrender1 libxtst6 libxi6
+
+      - name: Run Unit Tests
+        run: |
+          cd app
+          chmod +x mvnw
+          ./mvnw test
+
+      - name: Build Application JAR
+        run: |
+          cd app
+          ./mvnw clean package -DskipTests
+
+      - name: Package Linux .deb & Portable Tarball
+        run: |
+          JAR_NAME=$(basename $(find app/target -name "DidYouDoIt-*.jar" | head -n 1))
+          mkdir -p packaging/linux/output
+
+          # 1. Build .deb
+          jpackage \
+            --type deb \
+            --input app/target \
+            --main-jar "${JAR_NAME}" \
+            --main-class com.aarav.didyoudoit.DidYouDoItApp \
+            --name didyoudoit \
+            --app-version 1.0.0 \
+            --icon app/src/main/resources/icons/app-icon.png \
+            --linux-shortcut \
+            --dest packaging/linux/output
+
+          # 2. Build portable app-image tarball
+          jpackage \
+            --type app-image \
+            --input app/target \
+            --main-jar "${JAR_NAME}" \
+            --main-class com.aarav.didyoudoit.DidYouDoItApp \
+            --name didyoudoit \
+            --app-version 1.0.0 \
+            --icon app/src/main/resources/icons/app-icon.png \
+            --dest packaging/linux/output
+
+          cd packaging/linux/output
+          tar -czvf didyoudoit-1.0.0-linux-x64.tar.gz didyoudoit
+          rm -rf didyoudoit
+
+      - name: Upload Linux Artifacts (.deb, .tar.gz)
+        uses: actions/upload-artifact@v4
+        with:
+          name: DidYouDoIt-Linux-Packages
+          path: |
+            packaging/linux/output/*.deb
+            packaging/linux/output/*.tar.gz

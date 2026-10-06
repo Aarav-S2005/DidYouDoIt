@@ -1,0 +1,56 @@
+name: Build Windows Application & Installer
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Run Unit Tests
+        run: |
+          cd app
+          ./mvnw.cmd test
+
+      - name: Build Application JAR
+        run: |
+          cd app
+          ./mvnw.cmd clean package -DskipTests
+
+      - name: Package Windows Installer (MSI)
+        run: |
+          $Jar = Get-ChildItem -Path "app/target" -Filter "DidYouDoIt-*.jar" | Select-Object -First 1
+          New-Item -ItemType Directory -Force -Path "packaging/windows/output"
+          jpackage `
+            --type msi `
+            --input "app/target" `
+            --main-jar $Jar.Name `
+            --main-class "com.aarav.didyoudoit.DidYouDoItApp" `
+            --name "DidYouDoIt" `
+            --app-version "1.0.0" `
+            --vendor "Aarav" `
+            --icon "app/src/main/resources/icons/app-icon.png" `
+            --win-menu `
+            --win-shortcut `
+            --dest "packaging/windows/output"
+
+      - name: Upload Windows MSI Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DidYouDoIt-Windows-Installer
+          path: packaging/windows/output/*.msi
