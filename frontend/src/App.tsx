@@ -336,6 +336,10 @@ export function App() {
                 </div>
 
                 <div className="download-options">
+                  <a href={getDownloadUrl('msi')} target="_blank" rel="noreferrer" className="download-btn-item">
+                    <span>Windows Installer Package</span>
+                    <span className="download-ext">.msi</span>
+                  </a>
                   <a href={getDownloadUrl('zip')} target="_blank" rel="noreferrer" className="download-btn-item">
                     <span>Portable Bundle (Includes DidYouDoIt.exe)</span>
                     <span className="download-ext">.zip</span>
@@ -344,7 +348,7 @@ export function App() {
               </div>
 
               <div style={{ fontSize: 13, color: '#6C757D', marginTop: 12 }}>
-                Includes bundled Java runtime. Simply extract and double-click <code>DidYouDoIt.exe</code> to run. No Java installation needed.
+                Includes bundled Java runtime. Install via <code>.msi</code> for desktop & start menu shortcuts, or extract <code>.zip</code> to run portably.
               </div>
             </div>
 
