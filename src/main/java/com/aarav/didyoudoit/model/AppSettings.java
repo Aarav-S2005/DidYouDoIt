@@ -77,15 +77,7 @@ public class AppSettings {
     }
 
     public boolean isRemindersPaused() {
-        if (!remindersPaused) {
-            return false;
-        }
-        if (remindersPausedUntil != null && LocalDateTime.now().isAfter(remindersPausedUntil)) {
-            remindersPaused = false;
-            remindersPausedUntil = null;
-            return false;
-        }
-        return true;
+        return remindersPaused;
     }
 
     public void setRemindersPaused(boolean remindersPaused) {

@@ -187,6 +187,32 @@ public class SqliteHistoryRepository implements HistoryRepository {
         return executeCountQuery("SELECT COUNT(1) FROM task_history WHERE was_overdue = 1;");
     }
 
+    @Override
+    public void deleteHistory(String historyId) {
+        if (historyId == null) return;
+        String sql = "DELETE FROM task_history WHERE id = ?;";
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, historyId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Failed to delete history record: " + historyId, e);
+        }
+    }
+
+    @Override
+    public void deleteHistoryByTaskId(String taskId) {
+        if (taskId == null) return;
+        String sql = "DELETE FROM task_history WHERE task_id = ?;";
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, taskId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Failed to delete history for task: " + taskId, e);
+        }
+    }
+
     private long executeCountQuery(String sql) {
         try (Connection conn = databaseManager.getConnection();
              Statement stmt = conn.createStatement();

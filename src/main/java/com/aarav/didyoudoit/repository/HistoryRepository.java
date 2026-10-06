@@ -52,4 +52,14 @@ public interface HistoryRepository {
      * Counts completed tasks that were overdue when completed.
      */
     long countOverdueCompletions();
+
+    /**
+     * Deletes a specific history record by its history ID.
+     */
+    void deleteHistory(String historyId);
+
+    /**
+     * Deletes history records associated with a specific task ID.
+     */
+    void deleteHistoryByTaskId(String taskId);
 }

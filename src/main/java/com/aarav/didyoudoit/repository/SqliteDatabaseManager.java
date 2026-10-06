@@ -51,8 +51,18 @@ public class SqliteDatabaseManager implements DatabaseManager {
         if (appData != null && !appData.isBlank()) {
             dir = Paths.get(appData, DEFAULT_APP_DIR_NAME);
         } else {
+            String xdgData = System.getenv("XDG_DATA_HOME");
             String userHome = System.getProperty("user.home", ".");
-            dir = Paths.get(userHome, "." + DEFAULT_APP_DIR_NAME);
+            if (xdgData != null && !xdgData.isBlank()) {
+                dir = Paths.get(xdgData, DEFAULT_APP_DIR_NAME);
+            } else {
+                Path localShare = Paths.get(userHome, ".local", "share");
+                if (Files.isDirectory(localShare) || !System.getProperty("os.name", "").toLowerCase().contains("win")) {
+                    dir = localShare.resolve(DEFAULT_APP_DIR_NAME);
+                } else {
+                    dir = Paths.get(userHome, "." + DEFAULT_APP_DIR_NAME);
+                }
+            }
         }
         return dir.resolve(DEFAULT_DB_FILE_NAME).toAbsolutePath().toString();
     }

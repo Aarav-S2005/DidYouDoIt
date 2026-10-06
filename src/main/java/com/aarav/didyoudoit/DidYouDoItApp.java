@@ -1,177 +1,140 @@
 package com.aarav.didyoudoit;
 
-import com.aarav.didyoudoit.ui.theme.FontManager;
+import com.aarav.didyoudoit.model.Priority;
+import com.aarav.didyoudoit.model.RecurrenceRule;
+import com.aarav.didyoudoit.model.Task;
+import com.aarav.didyoudoit.model.TaskCategory;
+import com.aarav.didyoudoit.repository.*;
+import com.aarav.didyoudoit.service.*;
 import com.aarav.didyoudoit.ui.theme.Theme;
+import com.aarav.didyoudoit.util.ClockService;
+import com.aarav.didyoudoit.util.SystemClockService;
+import com.aarav.didyoudoit.view.DashboardView;
+import com.aarav.didyoudoit.viewmodel.DashboardViewModel;
+import com.aarav.didyoudoit.viewmodel.SettingsViewModel;
+import com.aarav.didyoudoit.viewmodel.StatisticsViewModel;
 import javafx.application.Application;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.VBox;
-import javafx.scene.shape.Circle;
+import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.logging.Logger;
 
 /**
- * Main application entry point for DidYouDoIt.
- * Built without FXML, verifying the central Theme, bundled Google fonts,
- * and warm/playful design foundation.
+ * Main application entry point and manual composition root for DidYouDoIt.
+ * Programs to interfaces with constructor injection; strictly avoids DI frameworks and FXML.
+ * Implements FR-01, FR-02, FR-03, FR-12, FR-23.
  */
 public class DidYouDoItApp extends Application {
 
     private static final Logger LOGGER = Logger.getLogger(DidYouDoItApp.class.getName());
 
+    private DatabaseManager databaseManager;
+    private NaggingDaemonService naggingDaemonService;
+    private TrayService trayService;
+
     @Override
     public void start(Stage primaryStage) {
-        LOGGER.info("Starting DidYouDoIt Application...");
+        LOGGER.info("Bootstrapping DidYouDoIt application...");
 
-        // Root container
-        VBox root = new VBox(Theme.SPACING_LG);
-        root.getStyleClass().add("app-container");
-        root.setAlignment(Pos.TOP_CENTER);
-        root.setPadding(new Insets(Theme.SPACING_XL));
+        // 1. Composition Root: Infrastructure & Repositories
+        this.databaseManager = new SqliteDatabaseManager();
+        TaskRepository taskRepository = new SqliteTaskRepository(databaseManager);
+        HistoryRepository historyRepository = new SqliteHistoryRepository(databaseManager);
+        SettingsRepository settingsRepository = new SqliteSettingsRepository(databaseManager);
 
-        // Header section (Cookie hero font + Indie Flower accent subtitle)
-        VBox headerBox = new VBox(Theme.SPACING_XS);
-        headerBox.setAlignment(Pos.CENTER);
-
-        Label titleLabel = new Label("DidYouDoIt?");
-        titleLabel.setFont(FontManager.getHeroFont(54));
-        titleLabel.getStyleClass().add("heading-title");
-
-        Label subtitleLabel = new Label("Your personal accountability and habit companion");
-        subtitleLabel.setFont(FontManager.getAccentFont(20));
-        subtitleLabel.getStyleClass().add("heading-subtitle");
-
-        headerBox.getChildren().addAll(titleLabel, subtitleLabel);
-
-        // Main Card (Surface) showcasing phase 1 deliverables
-        VBox card = new VBox(Theme.SPACING_MD);
-        card.getStyleClass().add("card-elevated");
-        card.setMaxWidth(680);
-        card.setAlignment(Pos.TOP_LEFT);
-
-        Label cardHeader = new Label("Phase 1: Design System & Project Foundation");
-        cardHeader.setFont(FontManager.getPrimaryFont(18));
-        cardHeader.getStyleClass().add("section-header");
-
-        Label bodyText = new Label(
-                "JavaFX 21, SQLite JDBC, and JNA are configured. Google Fonts (Delius, Indie Flower, Cookie) " +
-                "are loaded from classpath resources. Pure Java layout active without FXML."
+        // 2. Services
+        ClockService clockService = new SystemClockService();
+        StreakService streakService = new StreakServiceImpl(historyRepository, clockService);
+        RecurringTaskEngine recurringEngine = new RecurringTaskEngineImpl(taskRepository, clockService);
+        PersonalityMessageService messageService = new PersonalityMessageServiceImpl();
+        SettingsService settingsService = new SettingsServiceImpl(settingsRepository, clockService);
+        DataBackupService backupService = new JsonDataBackupServiceImpl(taskRepository, settingsRepository, historyRepository);
+        TaskService taskService = new TaskServiceImpl(
+                taskRepository, historyRepository, streakService, recurringEngine, clockService
         );
-        bodyText.setFont(FontManager.getPrimaryFont(14));
-        bodyText.getStyleClass().add("body-text");
-        bodyText.setWrapText(true);
+        boolean isWindows = System.getProperty("os.name", "").toLowerCase().contains("win");
+        StartupService startupService = isWindows ? new WindowsStartupServiceImpl() : new LinuxStartupServiceImpl();
+        this.trayService = new WindowsTrayServiceImpl();
 
-        // Badge row demonstrating semantic priority tokens
-        Label badgesTitle = new Label("Priority Badges:");
-        badgesTitle.setFont(FontManager.getPrimaryFont(13));
-        badgesTitle.getStyleClass().add("caption-text");
+        // 3. ViewModels
+        DashboardViewModel dashboardViewModel = new DashboardViewModel(taskService, recurringEngine, streakService);
+        StatisticsViewModel statisticsViewModel = new StatisticsViewModel(taskService, streakService, historyRepository, clockService);
+        SettingsViewModel settingsViewModel = new SettingsViewModel(settingsService, messageService, backupService, startupService);
 
-        HBox badgeRow = new HBox(Theme.SPACING_SM);
-        badgeRow.setAlignment(Pos.CENTER_LEFT);
+        // 4. UI Assembly
+        StackPane rootOverlay = new StackPane();
+        DashboardView dashboardView = new DashboardView(dashboardViewModel, statisticsViewModel, settingsViewModel, rootOverlay);
+        rootOverlay.getChildren().add(dashboardView);
 
-        Label urgentBadge = new Label("Urgent");
-        urgentBadge.getStyleClass().addAll("badge", "badge-urgent");
+        // 5. Notifications & Nagging Daemon Engine (FR-04, FR-05, FR-06, FR-07, FR-08)
+        InAppNotificationService inAppNotificationService = new InAppNotificationService();
+        inAppNotificationService.setToastConsumer(dashboardView::displayToast);
 
-        Label highBadge = new Label("High");
-        highBadge.getStyleClass().addAll("badge", "badge-high");
+        NotificationService osNotificationService = isWindows
+                ? new WindowsNativeNotificationService()
+                : new LinuxNativeNotificationService();
 
-        Label mediumBadge = new Label("Medium");
-        mediumBadge.getStyleClass().addAll("badge", "badge-medium");
-
-        Label lowBadge = new Label("Low");
-        lowBadge.getStyleClass().addAll("badge", "badge-low");
-
-        Label successBadge = new Label("Completed");
-        successBadge.getStyleClass().addAll("badge", "badge-success");
-
-        badgeRow.getChildren().addAll(urgentBadge, highBadge, mediumBadge, lowBadge, successBadge);
-
-        // Color swatches row
-        Label paletteTitle = new Label("Color Palette Tokens:");
-        paletteTitle.setFont(FontManager.getPrimaryFont(13));
-        paletteTitle.getStyleClass().add("caption-text");
-
-        HBox swatchRow = new HBox(Theme.SPACING_MD);
-        swatchRow.setAlignment(Pos.CENTER_LEFT);
-        swatchRow.getChildren().addAll(
-                createSwatch(Theme.COLOR_PRIMARY, "Terracotta"),
-                createSwatch(Theme.COLOR_SECONDARY, "Sage Mint"),
-                createSwatch(Theme.COLOR_TEXT_PRIMARY, "Warm Slate"),
-                createSwatch(Theme.COLOR_BACKGROUND, "Linen Cream"),
-                createSwatch(Theme.COLOR_DANGER, "Overdue Red")
+        NotificationService compositeNotificationService = new CompositeNotificationService(
+                inAppNotificationService,
+                osNotificationService
         );
 
-        // Buttons row
-        HBox buttonRow = new HBox(Theme.SPACING_MD);
-        buttonRow.setAlignment(Pos.CENTER_LEFT);
-
-        Button primaryBtn = new Button("Primary Action");
-        primaryBtn.getStyleClass().addAll("button", "btn-primary");
-
-        Button secondaryBtn = new Button("Secondary Action");
-        secondaryBtn.getStyleClass().addAll("button", "btn-secondary");
-
-        Button ghostBtn = new Button("Ghost Button");
-        ghostBtn.getStyleClass().addAll("button", "btn-ghost");
-
-        Label clickFeedback = new Label("Ready");
-        clickFeedback.setFont(FontManager.getAccentFont(15));
-        clickFeedback.getStyleClass().add("font-accent");
-
-        primaryBtn.setOnAction(e -> clickFeedback.setText("Primary clicked!"));
-        secondaryBtn.setOnAction(e -> clickFeedback.setText("Secondary clicked!"));
-        ghostBtn.setOnAction(e -> clickFeedback.setText("Ghost clicked!"));
-
-        buttonRow.getChildren().addAll(primaryBtn, secondaryBtn, ghostBtn, clickFeedback);
-
-        card.getChildren().addAll(
-                cardHeader,
-                bodyText,
-                badgesTitle,
-                badgeRow,
-                paletteTitle,
-                swatchRow,
-                buttonRow
+        this.naggingDaemonService = new NaggingDaemonServiceImpl(
+                taskService,
+                settingsService,
+                messageService,
+                compositeNotificationService,
+                clockService
         );
 
-        // Footer note
-        Label footerNote = new Label("Ready for Phase 2: Domain Models & Persistence Layer (SQLite + JDBC)");
-        footerNote.setFont(FontManager.getAccentFont(16));
-        footerNote.getStyleClass().add("font-accent");
+        this.naggingDaemonService.setOnTaskUpdatedListener(() -> javafx.application.Platform.runLater(dashboardViewModel::reloadTasks));
+        this.naggingDaemonService.setOnOpenAppRequestedListener(() -> javafx.application.Platform.runLater(() -> {
+            primaryStage.show();
+            primaryStage.toFront();
+        }));
+        this.naggingDaemonService.start();
 
-        root.getChildren().addAll(headerBox, card, footerNote);
-        VBox.setVgrow(card, Priority.NEVER);
+        // 6. System Tray & Window Minimize-to-Tray (FR-18, FR-19)
+        this.trayService.initialize(primaryStage, taskService, settingsService);
+        if (this.trayService.getNativeTrayIcon() != null && osNotificationService instanceof WindowsNativeNotificationService winNotif) {
+            winNotif.setSharedTrayIcon(this.trayService.getNativeTrayIcon());
+        }
 
-        Scene scene = new Scene(root, 760, 620);
+        Scene scene = new Scene(rootOverlay, 1100, 740);
         Theme.applyTheme(scene);
 
         primaryStage.setTitle("DidYouDoIt? - Personal Accountability");
+        try (var iconStream = getClass().getResourceAsStream("/icons/app-icon.png")) {
+            if (iconStream != null) {
+                primaryStage.getIcons().add(new javafx.scene.image.Image(iconStream));
+            }
+        } catch (Exception ignored) {}
         primaryStage.setScene(scene);
-        primaryStage.setMinWidth(640);
-        primaryStage.setMinHeight(520);
+        primaryStage.setMinWidth(520);
+        primaryStage.setMinHeight(540);
+        primaryStage.setMaximized(true);
         primaryStage.show();
+        primaryStage.setMaximized(true);
 
-        LOGGER.info("DidYouDoIt Window displayed successfully.");
+        LOGGER.info("DidYouDoIt Application is ready and running with background nagging daemon.");
     }
 
-    private HBox createSwatch(javafx.scene.paint.Color color, String name) {
-        Circle circle = new Circle(8, color);
-        circle.setStroke(Theme.COLOR_BORDER);
-        circle.setStrokeWidth(1);
 
-        Label label = new Label(name);
-        label.setFont(FontManager.getPrimaryFont(12));
-        label.getStyleClass().add("caption-text");
 
-        HBox box = new HBox(Theme.SPACING_XS, circle, label);
-        box.setAlignment(Pos.CENTER_LEFT);
-        return box;
+    @Override
+    public void stop() {
+        if (trayService != null) {
+            trayService.shutdown();
+        }
+        if (naggingDaemonService != null) {
+            naggingDaemonService.stop();
+        }
+        if (databaseManager != null) {
+            databaseManager.close();
+        }
     }
 
     public static void main(String[] args) {

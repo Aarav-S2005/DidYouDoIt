@@ -25,23 +25,42 @@ class PersonalityMessageServiceImplTest {
 
         // Gentle Initial
         PersonalityMessageService.NagMessage gentle = messageService.generateMessage(task, PersonalityType.GENTLE, 0);
-        assertTrue(gentle.title().contains("🌸"));
+        assertTrue(gentle.title().contains("File Tax Return"));
+        assertFalse(gentle.body().isBlank());
         assertEquals(EscalationLevel.INITIAL, gentle.level());
 
         // Strict Nudge
         PersonalityMessageService.NagMessage strict = messageService.generateMessage(task, PersonalityType.STRICT, 10);
-        assertTrue(strict.title().contains("Overdue"));
+        assertTrue(strict.title().contains("File Tax Return"));
+        assertFalse(strict.body().isBlank());
         assertEquals(EscalationLevel.NUDGE, strict.level());
 
         // Sarcastic Warn
         PersonalityMessageService.NagMessage sarcastic = messageService.generateMessage(task, PersonalityType.SARCASTIC, 25);
-        assertTrue(sarcastic.title().contains("Procrastination"));
+        assertTrue(sarcastic.title().contains("File Tax Return"));
+        assertFalse(sarcastic.body().isBlank());
         assertEquals(EscalationLevel.WARN, sarcastic.level());
 
         // Aggressive Critical
         PersonalityMessageService.NagMessage aggressive = messageService.generateMessage(task, PersonalityType.AGGRESSIVE, 60);
-        assertTrue(aggressive.title().contains("DROP EVERYTHING"));
+        assertTrue(aggressive.title().contains("File Tax Return"));
+        assertFalse(aggressive.body().isBlank());
         assertEquals(EscalationLevel.CRITICAL, aggressive.level());
+    }
+
+    @Test
+    @DisplayName("Randomized message pools generate varied content across repeated calls")
+    void testRandomizedPoolDiversity() {
+        Task task = Task.builder().title("Gym Workout").build();
+        java.util.Set<String> bodies = new java.util.HashSet<>();
+
+        for (int i = 0; i < 30; i++) {
+            var msg = messageService.generateMessage(task, PersonalityType.SARCASTIC, 5);
+            bodies.add(msg.body());
+        }
+
+        // Out of 30 samples from a pool of 10 items, we expect multiple distinct lines
+        assertTrue(bodies.size() > 1, "Randomization should produce multiple distinct message variants");
     }
 
     @Test

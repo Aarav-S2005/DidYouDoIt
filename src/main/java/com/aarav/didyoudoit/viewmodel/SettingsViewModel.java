@@ -1,0 +1,197 @@
+package com.aarav.didyoudoit.viewmodel;
+
+import com.aarav.didyoudoit.model.AppSettings;
+import com.aarav.didyoudoit.model.PersonalityType;
+import com.aarav.didyoudoit.model.Task;
+import com.aarav.didyoudoit.service.DataBackupService;
+import com.aarav.didyoudoit.service.PersonalityMessageService;
+import com.aarav.didyoudoit.service.SettingsService;
+import com.aarav.didyoudoit.service.StartupService;
+import javafx.application.Platform;
+import javafx.beans.property.*;
+
+import java.io.File;
+import java.time.LocalTime;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+
+/**
+ * Presentation ViewModel for application settings, personality customization,
+ * quiet hours, nagging intervals, and backup export/import.
+ * Implements FR-15, FR-16, FR-17, FR-20, FR-24, FR-25.
+ */
+public class SettingsViewModel {
+
+    private final SettingsService settingsService;
+    private final PersonalityMessageService personalityMessageService;
+    private final DataBackupService dataBackupService;
+
+    // Observable presentation properties
+    private final ObjectProperty<PersonalityType> personalityType = new SimpleObjectProperty<>(PersonalityType.SARCASTIC);
+    private final BooleanProperty quietHoursEnabled = new SimpleBooleanProperty(false);
+    private final ObjectProperty<LocalTime> quietHoursStart = new SimpleObjectProperty<>(LocalTime.of(22, 0));
+    private final ObjectProperty<LocalTime> quietHoursEnd = new SimpleObjectProperty<>(LocalTime.of(8, 0));
+    private final BooleanProperty remindersPaused = new SimpleBooleanProperty(false);
+    private final BooleanProperty autoStartOnBoot = new SimpleBooleanProperty(false);
+    private final BooleanProperty persistentNaggingEnabled = new SimpleBooleanProperty(true);
+    private final IntegerProperty escalationIntervalMinutes = new SimpleIntegerProperty(10);
+    private final IntegerProperty defaultSnoozeMinutes = new SimpleIntegerProperty(15);
+    private final StringProperty previewSampleQuote = new SimpleStringProperty("");
+    private final StringProperty statusMessage = new SimpleStringProperty("");
+
+    private final StartupService startupService;
+
+    public SettingsViewModel(SettingsService settingsService,
+                             PersonalityMessageService personalityMessageService,
+                             DataBackupService dataBackupService) {
+        this(settingsService, personalityMessageService, dataBackupService, null);
+    }
+
+    public SettingsViewModel(SettingsService settingsService,
+                             PersonalityMessageService personalityMessageService,
+                             DataBackupService dataBackupService,
+                             StartupService startupService) {
+        this.settingsService = Objects.requireNonNull(settingsService, "settingsService cannot be null");
+        this.personalityMessageService = Objects.requireNonNull(personalityMessageService, "personalityMessageService cannot be null");
+        this.dataBackupService = Objects.requireNonNull(dataBackupService, "dataBackupService cannot be null");
+        this.startupService = startupService;
+
+        loadSettings();
+    }
+
+    /**
+     * Loads saved settings from repository into observable properties.
+     */
+    public void loadSettings() {
+        AppSettings settings = settingsService.getSettings();
+        personalityType.set(settings.getPersonalityType());
+        quietHoursEnabled.set(settings.isQuietHoursEnabled());
+        quietHoursStart.set(settings.getQuietHoursStart());
+        quietHoursEnd.set(settings.getQuietHoursEnd());
+        remindersPaused.set(settingsService.areRemindersSuppressed());
+        autoStartOnBoot.set(settings.isAutoStartOnBoot());
+        persistentNaggingEnabled.set(settings.isPersistentNaggingEnabled());
+        escalationIntervalMinutes.set(settings.getEscalationIntervalMinutes());
+        defaultSnoozeMinutes.set(settings.getDefaultSnoozeMinutes());
+
+        updatePreviewQuote(settings.getPersonalityType());
+    }
+
+    /**
+     * Updates personality mode and generates live sample preview quotes (FR-15, FR-16).
+     */
+    public void setPersonality(PersonalityType personality) {
+        if (personality == null) return;
+        personalityType.set(personality);
+        settingsService.setPersonality(personality);
+        updatePreviewQuote(personality);
+    }
+
+    /**
+     * Updates preview sample quotes for the selected personality.
+     */
+    public void updatePreviewQuote(PersonalityType personality) {
+        if (personality == null) return;
+        Task dummy = Task.builder().title("Finish Project Report").build();
+
+        var initial = personalityMessageService.generateMessage(dummy, personality, 0);
+        var nudge = personalityMessageService.generateMessage(dummy, personality, 10);
+        var critical = personalityMessageService.generateMessage(dummy, personality, 60);
+
+        String preview = String.format(
+                "Initial: \"%s - %s\"\nNudge: \"%s - %s\"\nUrgent: \"%s - %s\"",
+                initial.title(), initial.body(),
+                nudge.title(), nudge.body(),
+                critical.title(), critical.body()
+        );
+        previewSampleQuote.set(preview);
+    }
+
+    public void setQuietHours(boolean enabled, LocalTime start, LocalTime end) {
+        AppSettings settings = settingsService.getSettings();
+        settings.setQuietHoursEnabled(enabled);
+        if (start != null) settings.setQuietHoursStart(start);
+        if (end != null) settings.setQuietHoursEnd(end);
+        settingsService.updateSettings(settings);
+
+        quietHoursEnabled.set(enabled);
+        if (start != null) quietHoursStart.set(start);
+        if (end != null) quietHoursEnd.set(end);
+    }
+
+    public void pauseReminders(int minutes) {
+        settingsService.pauseReminders(minutes);
+        remindersPaused.set(true);
+    }
+
+    public void resumeReminders() {
+        settingsService.resumeReminders();
+        remindersPaused.set(false);
+    }
+
+    public void setAutoStartOnBoot(boolean enabled) {
+        AppSettings settings = settingsService.getSettings();
+        settings.setAutoStartOnBoot(enabled);
+        settingsService.updateSettings(settings);
+        autoStartOnBoot.set(enabled);
+        if (startupService != null) {
+            startupService.setAutoStartEnabled(enabled);
+        }
+    }
+
+    public void setEscalationInterval(int minutes) {
+        AppSettings settings = settingsService.getSettings();
+        settings.setEscalationIntervalMinutes(minutes);
+        settingsService.updateSettings(settings);
+        escalationIntervalMinutes.set(minutes);
+    }
+
+    public void setDefaultSnooze(int minutes) {
+        AppSettings settings = settingsService.getSettings();
+        settings.setDefaultSnoozeMinutes(minutes);
+        settingsService.updateSettings(settings);
+        defaultSnoozeMinutes.set(minutes);
+    }
+
+    public CompletableFuture<Void> exportBackupAsync(File targetFile) {
+        return CompletableFuture.runAsync(() -> {
+            dataBackupService.exportBackup(targetFile);
+            runOnFxThread(() -> statusMessage.set("Backup exported successfully!"));
+        });
+    }
+
+    public CompletableFuture<Void> importBackupAsync(File sourceFile) {
+        return CompletableFuture.runAsync(() -> {
+            dataBackupService.importBackup(sourceFile);
+            runOnFxThread(() -> {
+                loadSettings();
+                statusMessage.set("Backup imported successfully!");
+            });
+        });
+    }
+
+    private void runOnFxThread(Runnable action) {
+        try {
+            if (Platform.isFxApplicationThread()) {
+                action.run();
+            } else {
+                Platform.runLater(action);
+            }
+        } catch (IllegalStateException e) {
+            action.run();
+        }
+    }
+
+    // Property getters
+    public ObjectProperty<PersonalityType> personalityTypeProperty() { return personalityType; }
+    public BooleanProperty quietHoursEnabledProperty() { return quietHoursEnabled; }
+    public ObjectProperty<LocalTime> quietHoursStartProperty() { return quietHoursStart; }
+    public ObjectProperty<LocalTime> quietHoursEndProperty() { return quietHoursEnd; }
+    public BooleanProperty remindersPausedProperty() { return remindersPaused; }
+    public BooleanProperty autoStartOnBootProperty() { return autoStartOnBoot; }
+    public BooleanProperty persistentNaggingEnabledProperty() { return persistentNaggingEnabled; }
+    public IntegerProperty escalationIntervalMinutesProperty() { return escalationIntervalMinutes; }
+    public IntegerProperty defaultSnoozeMinutesProperty() { return defaultSnoozeMinutes; }
+    public StringProperty previewSampleQuoteProperty() { return previewSampleQuote; }
+    public StringProperty statusMessageProperty() { return statusMessage; }
+}

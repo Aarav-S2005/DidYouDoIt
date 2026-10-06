@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="coralGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F28E72"/>
+      <stop offset="100%" stop-color="#D46347"/>
+    </linearGradient>
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#D46347" flood-opacity="0.35"/>
+    </filter>
+    <filter id="checkGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000000" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <!-- Background Rounded Squircle with Shadow -->
+  <rect x="24" y="24" width="208" height="208" rx="54" fill="url(#coralGradient)" filter="url(#softShadow)"/>
+
+  <!-- Inner Soft Accent Ring -->
+  <rect x="25" y="25" width="206" height="206" rx="53" fill="none" stroke="#FFFFFF" stroke-opacity="0.25" stroke-width="2"/>
+
+  <!-- Bold Accountability Checkmark -->
+  <path d="M74 136 L112 174 L184 94" 
+        fill="none" 
+        stroke="#FFFFFF" 
+        stroke-width="26" 
+        stroke-linecap="round" 
+        stroke-linejoin="round" 
+        filter="url(#checkGlow)"/>
+
+  <!-- Small Accountability Spark / Dot -->
+  <circle cx="188" cy="70" r="10" fill="#FFE58F"/>
+</svg>
