@@ -37,6 +37,25 @@ public class DidYouDoItApp extends Application {
 
     @Override
     public void start(Stage primaryStage) {
+        // Enforce single instance: if another instance is running, activate it and exit immediately
+        boolean isPrimaryInstance = com.aarav.didyoudoit.util.SingleInstanceManager.acquireInstanceLock(() -> {
+            javafx.application.Platform.runLater(() -> {
+                if (primaryStage != null) {
+                    primaryStage.show();
+                    primaryStage.setIconified(false);
+                    primaryStage.toFront();
+                    primaryStage.requestFocus();
+                }
+            });
+        });
+
+        if (!isPrimaryInstance) {
+            LOGGER.info("Existing DidYouDoIt instance active. Exiting this duplicate process.");
+            javafx.application.Platform.exit();
+            System.exit(0);
+            return;
+        }
+
         LOGGER.info("Bootstrapping DidYouDoIt application...");
 
         // 1. Composition Root: Infrastructure & Repositories
@@ -135,9 +154,14 @@ public class DidYouDoItApp extends Application {
         if (databaseManager != null) {
             databaseManager.close();
         }
+        com.aarav.didyoudoit.util.SingleInstanceManager.releaseInstanceLock();
     }
 
     public static void main(String[] args) {
+        if (!com.aarav.didyoudoit.util.SingleInstanceManager.checkAndAcquireLockEarly()) {
+            System.exit(0);
+            return;
+        }
         launch(args);
     }
 }

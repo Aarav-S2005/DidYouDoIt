@@ -213,13 +213,13 @@ public class NaggingDaemonServiceImpl implements NaggingDaemonService, Notificat
 
     private int calculateScaledInterval(int baseMinutes, Priority priority) {
         if (priority == null) {
-            return baseMinutes;
+            return Math.max(3, baseMinutes);
         }
         return switch (priority) {
-            case URGENT -> Math.max(1, baseMinutes / 2);
-            case HIGH -> Math.max(2, (int) Math.round(baseMinutes * 0.75));
-            case MEDIUM -> baseMinutes;
-            case LOW -> (int) Math.round(baseMinutes * 1.5);
+            case URGENT -> Math.max(3, (int) Math.round(baseMinutes * 0.5));
+            case HIGH -> Math.max(3, (int) Math.round(baseMinutes * 0.75));
+            case MEDIUM -> Math.max(5, baseMinutes);
+            case LOW -> Math.max(5, (int) Math.round(baseMinutes * 1.5));
         };
     }
 

@@ -447,6 +447,54 @@
     -fx-border-color: #E76F51;
 }
 
+.check-box {
+    -fx-font-family: "Delius", sans-serif;
+    -fx-font-size: 13.5px;
+    -fx-text-fill: #2B2D42;
+}
+
+.check-box .label {
+    -fx-text-fill: #2B2D42;
+    -fx-padding: 0 0 0 8px;
+}
+
+.check-box .box {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #C8BFB5;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-border-width: 1.5px;
+}
+
+.check-box:selected .box {
+    -fx-background-color: #E27D60;
+    -fx-border-color: #E27D60;
+}
+
+.check-box:selected .mark {
+    -fx-background-color: #FFFFFF;
+}
+
+.combo-box {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #E5DFD7;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-border-width: 1.5px;
+    -fx-padding: 4px 8px;
+    -fx-font-family: "Delius", sans-serif;
+    -fx-font-size: 13px;
+    -fx-text-fill: #2B2D42;
+}
+
+.combo-box:hover {
+    -fx-border-color: #D46B4E;
+}
+
+.combo-box .list-cell {
+    -fx-text-fill: #2B2D42;
+}
+
 /* --------------------------------------------------------------------------
    Empty State Container
    -------------------------------------------------------------------------- */
