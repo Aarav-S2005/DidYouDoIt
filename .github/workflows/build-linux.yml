@@ -25,7 +25,7 @@ jobs:
       - name: Install Packaging Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y fakeroot rpm libasound2 libx11-6 libxext6 libxrender1 libxtst6 libxi6
+          sudo apt-get install -y fakeroot rpm libasound2t64 libx11-6 libxext6 libxrender1 libxtst6 libxi6 || sudo apt-get install -y fakeroot rpm libasound2 libx11-6 libxext6 libxrender1 libxtst6 libxi6
 
       - name: Run Unit Tests
         run: |
@@ -36,11 +36,16 @@ jobs:
       - name: Build Application JAR
         run: |
           cd app
+          chmod +x mvnw
           ./mvnw clean package -DskipTests
 
       - name: Package Linux .deb & Portable Tarball
         run: |
-          JAR_NAME=$(basename $(find app/target -name "DidYouDoIt-*.jar" | head -n 1))
+          JAR_PATH="app/target/DidYouDoIt-1.0-SNAPSHOT-all.jar"
+          if [ ! -f "$JAR_PATH" ]; then
+            JAR_PATH=$(find app/target -name "DidYouDoIt-*.jar" | head -n 1)
+          fi
+          JAR_NAME=$(basename "$JAR_PATH")
           mkdir -p packaging/linux/output
 
           # 1. Build .deb
@@ -48,7 +53,7 @@ jobs:
             --type deb \
             --input app/target \
             --main-jar "${JAR_NAME}" \
-            --main-class com.aarav.didyoudoit.DidYouDoItApp \
+            --main-class com.aarav.didyoudoit.Main \
             --name didyoudoit \
             --app-version 1.0.0 \
             --icon app/src/main/resources/icons/app-icon.png \
@@ -60,7 +65,7 @@ jobs:
             --type app-image \
             --input app/target \
             --main-jar "${JAR_NAME}" \
-            --main-class com.aarav.didyoudoit.DidYouDoItApp \
+            --main-class com.aarav.didyoudoit.Main \
             --name didyoudoit \
             --app-version 1.0.0 \
             --icon app/src/main/resources/icons/app-icon.png \

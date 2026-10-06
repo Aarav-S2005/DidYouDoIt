@@ -32,25 +32,57 @@ jobs:
           cd app
           ./mvnw.cmd clean package -DskipTests
 
-      - name: Package Windows Installer (MSI)
+      - name: Package Windows Portable Bundle & Installer
         run: |
-          $Jar = Get-ChildItem -Path "app/target" -Filter "DidYouDoIt-*.jar" | Select-Object -First 1
-          New-Item -ItemType Directory -Force -Path "packaging/windows/output"
+          $JarPath = "app/target/DidYouDoIt-1.0-SNAPSHOT-all.jar"
+          if (-not (Test-Path $JarPath)) {
+            $JarPath = (Get-ChildItem -Path "app/target" -Filter "DidYouDoIt-*.jar" | Select-Object -First 1).FullName
+          }
+          $JarLeaf = Split-Path $JarPath -Leaf
+
+          $OutDir = "packaging/windows/output"
+          New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
+          New-Item -ItemType Directory -Force -Path "packaging/windows/staging/jars" | Out-Null
+          Copy-Item $JarPath "packaging/windows/staging/jars/DidYouDoIt.jar"
+
+          $Icon = "app/src/main/resources/icons/app-icon.ico"
+          if (-not (Test-Path $Icon)) {
+            $Icon = "app/src/main/resources/icons/app-icon.png"
+          }
+
+          # 1. Build portable app-image and zip
           jpackage `
-            --type msi `
-            --input "app/target" `
-            --main-jar $Jar.Name `
-            --main-class "com.aarav.didyoudoit.DidYouDoItApp" `
+            --type app-image `
+            --input "packaging/windows/staging/jars" `
+            --main-jar "DidYouDoIt.jar" `
+            --main-class "com.aarav.didyoudoit.Main" `
             --name "DidYouDoIt" `
             --app-version "1.0.0" `
             --vendor "Aarav" `
-            --icon "app/src/main/resources/icons/app-icon.png" `
+            --icon $Icon `
+            --dest $OutDir
+
+          Compress-Archive -Path "$OutDir/DidYouDoIt/*" -DestinationPath "$OutDir/DidYouDoIt-Windows-Portable-v1.0.0.zip" -Force
+
+          # 2. Build MSI installer
+          jpackage `
+            --type msi `
+            --input "packaging/windows/staging/jars" `
+            --main-jar "DidYouDoIt.jar" `
+            --main-class "com.aarav.didyoudoit.Main" `
+            --name "DidYouDoIt" `
+            --app-version "1.0.0" `
+            --vendor "Aarav" `
+            --icon $Icon `
             --win-menu `
             --win-shortcut `
-            --dest "packaging/windows/output"
+            --win-dir-chooser `
+            --dest $OutDir
 
-      - name: Upload Windows MSI Artifact
+      - name: Upload Windows Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: DidYouDoIt-Windows-Installer
-          path: packaging/windows/output/*.msi
+          name: DidYouDoIt-Windows-Packages
+          path: |
+            packaging/windows/output/*.zip
+            packaging/windows/output/*.msi
