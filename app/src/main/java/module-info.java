@@ -3,6 +3,7 @@ module com.aarav.didyoudoit {
     requires javafx.graphics;
     requires java.sql;
     requires java.desktop;
+    requires java.net.http;
     requires com.sun.jna;
     requires com.sun.jna.platform;
 

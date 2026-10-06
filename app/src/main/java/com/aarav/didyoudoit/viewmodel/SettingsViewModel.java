@@ -40,21 +40,40 @@ public class SettingsViewModel {
     private final StringProperty statusMessage = new SimpleStringProperty("");
 
     private final StartupService startupService;
+    private final com.aarav.didyoudoit.service.UpdateService updateService;
+
+    // In-app update properties
+    private final StringProperty appVersion = new SimpleStringProperty("1.0.1");
+    private final BooleanProperty checkingForUpdate = new SimpleBooleanProperty(false);
+    private final BooleanProperty updateAvailable = new SimpleBooleanProperty(false);
+    private final StringProperty latestVersionString = new SimpleStringProperty("v1.0.1");
+    private final StringProperty updateDownloadUrl = new SimpleStringProperty("");
+    private final StringProperty updateStatusMessage = new SimpleStringProperty("You are on the latest version.");
 
     public SettingsViewModel(SettingsService settingsService,
                              PersonalityMessageService personalityMessageService,
                              DataBackupService dataBackupService) {
-        this(settingsService, personalityMessageService, dataBackupService, null);
+        this(settingsService, personalityMessageService, dataBackupService, null, new com.aarav.didyoudoit.service.UpdateServiceImpl());
     }
 
     public SettingsViewModel(SettingsService settingsService,
                              PersonalityMessageService personalityMessageService,
                              DataBackupService dataBackupService,
                              StartupService startupService) {
+        this(settingsService, personalityMessageService, dataBackupService, startupService, new com.aarav.didyoudoit.service.UpdateServiceImpl());
+    }
+
+    public SettingsViewModel(SettingsService settingsService,
+                             PersonalityMessageService personalityMessageService,
+                             DataBackupService dataBackupService,
+                             StartupService startupService,
+                             com.aarav.didyoudoit.service.UpdateService updateService) {
         this.settingsService = Objects.requireNonNull(settingsService, "settingsService cannot be null");
         this.personalityMessageService = Objects.requireNonNull(personalityMessageService, "personalityMessageService cannot be null");
         this.dataBackupService = Objects.requireNonNull(dataBackupService, "dataBackupService cannot be null");
         this.startupService = startupService;
+        this.updateService = Objects.requireNonNull(updateService, "updateService cannot be null");
+        this.appVersion.set(updateService.getCurrentVersion());
 
         loadSettings();
     }
@@ -182,7 +201,35 @@ public class SettingsViewModel {
         }
     }
 
+    public CompletableFuture<com.aarav.didyoudoit.service.UpdateService.UpdateInfo> checkForUpdatesAsync() {
+        checkingForUpdate.set(true);
+        updateStatusMessage.set("Checking GitHub for newer releases...");
+
+        return updateService.checkForUpdatesAsync().thenApply(info -> {
+            runOnFxThread(() -> {
+                checkingForUpdate.set(false);
+                updateAvailable.set(info.updateAvailable());
+                latestVersionString.set(info.latestVersion());
+                updateDownloadUrl.set(info.downloadUrl());
+
+                if (info.updateAvailable()) {
+                    updateStatusMessage.set("Update Available! " + info.latestVersion() + " is ready to install.");
+                } else {
+                    updateStatusMessage.set("You're all set! DidYouDoIt " + info.currentVersion() + " is the latest version.");
+                }
+            });
+            return info;
+        });
+    }
+
     // Property getters
+    public StringProperty appVersionProperty() { return appVersion; }
+    public BooleanProperty checkingForUpdateProperty() { return checkingForUpdate; }
+    public BooleanProperty updateAvailableProperty() { return updateAvailable; }
+    public StringProperty latestVersionStringProperty() { return latestVersionString; }
+    public StringProperty updateDownloadUrlProperty() { return updateDownloadUrl; }
+    public StringProperty updateStatusMessageProperty() { return updateStatusMessage; }
+
     public ObjectProperty<PersonalityType> personalityTypeProperty() { return personalityType; }
     public BooleanProperty quietHoursEnabledProperty() { return quietHoursEnabled; }
     public ObjectProperty<LocalTime> quietHoursStartProperty() { return quietHoursStart; }

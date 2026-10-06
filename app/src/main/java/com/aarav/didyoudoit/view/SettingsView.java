@@ -56,12 +56,16 @@ public class SettingsView extends ScrollPane {
         // 5. Backup & Restore Section (FR-25)
         VBox backupSection = createBackupSection();
 
+        // 6. Application Updates & About Section
+        VBox updateSection = createUpdateSection();
+
         this.contentBox.getChildren().addAll(
                 headerBox,
                 personalitySection,
                 quietHoursSection,
                 timingSection,
-                backupSection
+                backupSection,
+                updateSection
         );
 
         setContent(contentBox);
@@ -165,90 +169,125 @@ public class SettingsView extends ScrollPane {
 
     private VBox createQuietHoursSection() {
         VBox section = new VBox(Theme.SPACING_MD);
-        Label header = new Label("Quiet Hours & Pause Reminders");
+        Label header = new Label("Quiet Hours & Do Not Disturb");
         header.setFont(FontManager.getPrimaryFont(18));
         header.getStyleClass().add("section-header");
 
-        // Quiet hours toggle and time pickers
-        VBox quietBox = new VBox(Theme.SPACING_SM);
+        Label sectionDesc = new Label("Automatically silence all popups and notifications so your sleep or focus time isn't interrupted.");
+        sectionDesc.setFont(FontManager.getPrimaryFont(12));
+        sectionDesc.getStyleClass().add("caption-text");
+
+        VBox quietBox = new VBox(Theme.SPACING_MD);
         quietBox.setPadding(new Insets(Theme.SPACING_MD));
         quietBox.getStyleClass().add("card");
 
-        CheckBox quietCheck = new CheckBox("Enable Quiet Hours (suppress all reminders during this window)");
-        quietCheck.setFont(FontManager.getPrimaryFont(13));
+        // Main Toggle
+        CheckBox quietCheck = new CheckBox("Enable Scheduled Do Not Disturb");
+        quietCheck.setFont(FontManager.getPrimaryFont(14));
+        quietCheck.setStyle("-fx-font-weight: bold;");
         quietCheck.setSelected(viewModel.quietHoursEnabledProperty().get());
 
-        HBox timeRow = new HBox(Theme.SPACING_MD);
-        timeRow.setAlignment(Pos.CENTER_LEFT);
+        // Time pickers with readable 12-hour AM/PM labels
+        GridPane timeGrid = new GridPane();
+        timeGrid.setHgap(Theme.SPACING_LG);
+        timeGrid.setVgap(Theme.SPACING_SM);
+        timeGrid.setAlignment(Pos.CENTER_LEFT);
 
-        Label startLabel = new Label("Start Time:");
+        Label startLabel = new Label("Quiet Hours Start (Bedtime / Silence begins):");
         startLabel.setFont(FontManager.getPrimaryFont(12));
-        ComboBox<Integer> startHourCombo = createHourComboBox(viewModel.quietHoursStartProperty().get().getHour());
+        ComboBox<String> startHourCombo = create12HourComboBox(viewModel.quietHoursStartProperty().get().getHour());
 
-        Label endLabel = new Label("End Time:");
+        Label endLabel = new Label("Quiet Hours End (Morning / Reminders resume):");
         endLabel.setFont(FontManager.getPrimaryFont(12));
-        ComboBox<Integer> endHourCombo = createHourComboBox(viewModel.quietHoursEndProperty().get().getHour());
+        ComboBox<String> endHourCombo = create12HourComboBox(viewModel.quietHoursEndProperty().get().getHour());
 
-        timeRow.getChildren().addAll(startLabel, startHourCombo, endLabel, endHourCombo);
+        timeGrid.add(startLabel, 0, 0);
+        timeGrid.add(startHourCombo, 0, 1);
+        timeGrid.add(endLabel, 1, 0);
+        timeGrid.add(endHourCombo, 1, 1);
+
+        Label statusNotice = new Label();
+        statusNotice.setFont(FontManager.getAccentFont(12.5));
+        statusNotice.setStyle("-fx-text-fill: #E27D60; -fx-font-style: italic;");
+
+        Runnable updateStatusNotice = () -> {
+            if (quietCheck.isSelected()) {
+                statusNotice.setText("Notifications will be completely silenced between " + startHourCombo.getValue() + " and " + endHourCombo.getValue() + " every day.");
+            } else {
+                statusNotice.setText("Scheduled quiet hours are currently disabled (reminders will fire at all scheduled times).");
+            }
+        };
 
         Runnable saveQuietHours = () -> {
             boolean enabled = quietCheck.isSelected();
-            int startH = startHourCombo.getValue() != null ? startHourCombo.getValue() : 22;
-            int endH = endHourCombo.getValue() != null ? endHourCombo.getValue() : 8;
+            int startH = parse12HourString(startHourCombo.getValue(), 22);
+            int endH = parse12HourString(endHourCombo.getValue(), 8);
             viewModel.setQuietHours(enabled, LocalTime.of(startH, 0), LocalTime.of(endH, 0));
+            updateStatusNotice.run();
         };
 
         quietCheck.setOnAction(e -> saveQuietHours.run());
         startHourCombo.setOnAction(e -> saveQuietHours.run());
         endHourCombo.setOnAction(e -> saveQuietHours.run());
+        updateStatusNotice.run();
 
-        // Quick Pause Reminders Buttons (All text, no icons)
-        Label pauseLabel = new Label("Quick Pause:");
-        pauseLabel.setFont(FontManager.getPrimaryFont(13));
-        pauseLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #2B2D42;");
+        // Quick Temporary Pause Section
+        VBox pauseSubBox = new VBox(Theme.SPACING_XS);
+        Label pauseHeader = new Label("Take a Quick Break (Temporary Pause)");
+        pauseHeader.setFont(FontManager.getPrimaryFont(13));
+        pauseHeader.setStyle("-fx-font-weight: bold; -fx-text-fill: #2B2D42;");
+
+        Label pauseSub = new Label("In a meeting or need silence right now? Pause all reminders temporarily without modifying your daily schedule.");
+        pauseSub.setFont(FontManager.getPrimaryFont(11.5));
+        pauseSub.setStyle("-fx-text-fill: #6B7280;");
 
         HBox pauseBtnRow = new HBox(Theme.SPACING_SM);
         pauseBtnRow.setAlignment(Pos.CENTER_LEFT);
 
-        Button pause30Btn = createTextActionButton("Pause 30m", e -> {
+        Button pause30Btn = createTextActionButton("Pause for 30m", e -> {
             viewModel.pauseReminders(30);
-            if (toastNotifier != null) toastNotifier.accept("Paused", "Reminders paused for 30 minutes.");
+            if (toastNotifier != null) toastNotifier.accept("Reminders Paused", "All nagging paused for 30 minutes.");
         });
 
-        Button pause1hBtn = createTextActionButton("Pause 1 Hour", e -> {
+        Button pause1hBtn = createTextActionButton("Pause for 1 Hour", e -> {
             viewModel.pauseReminders(60);
-            if (toastNotifier != null) toastNotifier.accept("Paused", "Reminders paused for 1 hour.");
+            if (toastNotifier != null) toastNotifier.accept("Reminders Paused", "All nagging paused for 1 hour.");
         });
 
-        Button pause2hBtn = createTextActionButton("Pause 2 Hours", e -> {
+        Button pause2hBtn = createTextActionButton("Pause for 2 Hours", e -> {
             viewModel.pauseReminders(120);
-            if (toastNotifier != null) toastNotifier.accept("Paused", "Reminders paused for 2 hours.");
+            if (toastNotifier != null) toastNotifier.accept("Reminders Paused", "All nagging paused for 2 hours.");
         });
 
-        Button resumeBtn = createTextActionButton("Resume Now", e -> {
+        Button resumeBtn = createTextActionButton("Resume Reminders Now", e -> {
             viewModel.resumeReminders();
-            if (toastNotifier != null) toastNotifier.accept("Resumed", "Reminders are active.");
+            if (toastNotifier != null) toastNotifier.accept("Reminders Active", "Nagging daemon is now active.");
         });
 
         pauseBtnRow.getChildren().addAll(pause30Btn, pause1hBtn, pause2hBtn, resumeBtn);
+        pauseSubBox.getChildren().addAll(pauseHeader, pauseSub, pauseBtnRow);
 
-        quietBox.getChildren().addAll(quietCheck, timeRow, new Separator(), pauseLabel, pauseBtnRow);
-        section.getChildren().addAll(header, quietBox);
+        quietBox.getChildren().addAll(quietCheck, timeGrid, statusNotice, new Separator(), pauseSubBox);
+        section.getChildren().addAll(header, sectionDesc, quietBox);
         return section;
     }
 
     private VBox createTimingSection() {
         VBox section = new VBox(Theme.SPACING_MD);
-        Label header = new Label("Nagging Frequency & Startup");
+        Label header = new Label("Nagging Frequency & Startup Preferences");
         header.setFont(FontManager.getPrimaryFont(18));
         header.getStyleClass().add("section-header");
+
+        Label sectionDesc = new Label("Control how persistently DidYouDoIt follows up on overdue tasks.");
+        sectionDesc.setFont(FontManager.getPrimaryFont(12));
+        sectionDesc.getStyleClass().add("caption-text");
 
         VBox box = new VBox(Theme.SPACING_MD);
         box.setPadding(new Insets(Theme.SPACING_MD));
         box.getStyleClass().add("card");
 
         // Auto-start on boot checkbox
-        CheckBox autoStartCheck = new CheckBox("Launch DidYouDoIt automatically when Windows starts");
+        CheckBox autoStartCheck = new CheckBox("Launch DidYouDoIt automatically in the background on system login");
         autoStartCheck.setFont(FontManager.getPrimaryFont(13));
         autoStartCheck.setSelected(viewModel.autoStartOnBootProperty().get());
         autoStartCheck.setOnAction(e -> {
@@ -259,45 +298,65 @@ public class SettingsView extends ScrollPane {
         });
 
         // Escalation interval combo
-        HBox intervalRow = new HBox(Theme.SPACING_MD);
-        intervalRow.setAlignment(Pos.CENTER_LEFT);
-        Label intervalLabel = new Label("Escalate Overdue Tasks Every:");
-        intervalLabel.setFont(FontManager.getPrimaryFont(12));
+        VBox intervalBox = new VBox(Theme.SPACING_XS);
+        Label intervalLabel = new Label("Nagging Follow-up Frequency (how often to remind you while a task is overdue):");
+        intervalLabel.setFont(FontManager.getPrimaryFont(12.5));
+        intervalLabel.setStyle("-fx-font-weight: bold;");
 
         ComboBox<String> intervalCombo = new ComboBox<>();
-        intervalCombo.getItems().addAll("5 minutes", "10 minutes", "15 minutes", "30 minutes");
-        intervalCombo.setValue(viewModel.escalationIntervalMinutesProperty().get() + " minutes");
+        intervalCombo.getItems().addAll(
+                "Every 5 minutes (Intense Accountability)",
+                "Every 10 minutes (Recommended)",
+                "Every 15 minutes (Balanced)",
+                "Every 30 minutes (Gentle & Relaxed)"
+        );
+
+        int currentInterval = viewModel.escalationIntervalMinutesProperty().get();
+        if (currentInterval == 5) intervalCombo.setValue("Every 5 minutes (Intense Accountability)");
+        else if (currentInterval == 15) intervalCombo.setValue("Every 15 minutes (Balanced)");
+        else if (currentInterval == 30) intervalCombo.setValue("Every 30 minutes (Gentle & Relaxed)");
+        else intervalCombo.setValue("Every 10 minutes (Recommended)");
+
         intervalCombo.setOnAction(e -> {
             String val = intervalCombo.getValue();
             if (val != null) {
-                int mins = Integer.parseInt(val.replace(" minutes", ""));
-                viewModel.setEscalationInterval(mins);
+                if (val.contains("5 minutes")) viewModel.setEscalationInterval(5);
+                else if (val.contains("15 minutes")) viewModel.setEscalationInterval(15);
+                else if (val.contains("30 minutes")) viewModel.setEscalationInterval(30);
+                else viewModel.setEscalationInterval(10);
             }
         });
 
-        intervalRow.getChildren().addAll(intervalLabel, intervalCombo);
+        intervalBox.getChildren().addAll(intervalLabel, intervalCombo);
 
         // Default snooze combo
-        HBox snoozeRow = new HBox(Theme.SPACING_MD);
-        snoozeRow.setAlignment(Pos.CENTER_LEFT);
-        Label snoozeLabel = new Label("Default Snooze Duration:");
-        snoozeLabel.setFont(FontManager.getPrimaryFont(12));
+        VBox snoozeBox = new VBox(Theme.SPACING_XS);
+        Label snoozeLabel = new Label("Default Notification Snooze Duration:");
+        snoozeLabel.setFont(FontManager.getPrimaryFont(12.5));
+        snoozeLabel.setStyle("-fx-font-weight: bold;");
 
         ComboBox<String> snoozeCombo = new ComboBox<>();
-        snoozeCombo.getItems().addAll("5 minutes", "10 minutes", "15 minutes", "30 minutes", "60 minutes");
-        snoozeCombo.setValue(viewModel.defaultSnoozeMinutesProperty().get() + " minutes");
+        snoozeCombo.getItems().addAll("5 minutes", "10 minutes", "15 minutes (Recommended)", "30 minutes", "60 minutes");
+
+        int currentSnooze = viewModel.defaultSnoozeMinutesProperty().get();
+        if (currentSnooze == 5) snoozeCombo.setValue("5 minutes");
+        else if (currentSnooze == 10) snoozeCombo.setValue("10 minutes");
+        else if (currentSnooze == 30) snoozeCombo.setValue("30 minutes");
+        else if (currentSnooze == 60) snoozeCombo.setValue("60 minutes");
+        else snoozeCombo.setValue("15 minutes (Recommended)");
+
         snoozeCombo.setOnAction(e -> {
             String val = snoozeCombo.getValue();
             if (val != null) {
-                int mins = Integer.parseInt(val.replace(" minutes", ""));
+                int mins = Integer.parseInt(val.replaceAll("[^0-9]", ""));
                 viewModel.setDefaultSnooze(mins);
             }
         });
 
-        snoozeRow.getChildren().addAll(snoozeLabel, snoozeCombo);
+        snoozeBox.getChildren().addAll(snoozeLabel, snoozeCombo);
 
-        box.getChildren().addAll(autoStartCheck, new Separator(), intervalRow, snoozeRow);
-        section.getChildren().addAll(header, box);
+        box.getChildren().addAll(autoStartCheck, new Separator(), intervalBox, snoozeBox);
+        section.getChildren().addAll(header, sectionDesc, box);
         return section;
     }
 
@@ -363,13 +422,108 @@ public class SettingsView extends ScrollPane {
         }
     }
 
-    private ComboBox<Integer> createHourComboBox(int initialHour) {
-        ComboBox<Integer> combo = new ComboBox<>();
+    private VBox createUpdateSection() {
+        VBox section = new VBox(Theme.SPACING_MD);
+        Label header = new Label("Software Updates & Version");
+        header.setFont(FontManager.getPrimaryFont(18));
+        header.getStyleClass().add("section-header");
+
+        Label sectionDesc = new Label("Check for new features, nagging copy enhancements, and bug fixes directly from GitHub.");
+        sectionDesc.setFont(FontManager.getPrimaryFont(12));
+        sectionDesc.getStyleClass().add("caption-text");
+
+        VBox box = new VBox(Theme.SPACING_MD);
+        box.setPadding(new Insets(Theme.SPACING_MD));
+        box.getStyleClass().add("card");
+
+        HBox versionRow = new HBox(Theme.SPACING_MD);
+        versionRow.setAlignment(Pos.CENTER_LEFT);
+
+        Label currentVerLabel = new Label("Installed Version:");
+        currentVerLabel.setFont(FontManager.getPrimaryFont(13));
+        currentVerLabel.setStyle("-fx-font-weight: bold;");
+
+        Label currentVerBadge = new Label("v" + viewModel.appVersionProperty().get());
+        currentVerBadge.getStyleClass().addAll("badge", "badge-default-chip");
+
+        versionRow.getChildren().addAll(currentVerLabel, currentVerBadge);
+
+        Label statusLabel = new Label();
+        statusLabel.setFont(FontManager.getPrimaryFont(12.5));
+        statusLabel.textProperty().bind(viewModel.updateStatusMessageProperty());
+
+        HBox actionsRow = new HBox(Theme.SPACING_MD);
+        actionsRow.setAlignment(Pos.CENTER_LEFT);
+
+        AppButton checkBtn = AppButton.secondary("Check for Updates Now");
+        checkBtn.disableProperty().bind(viewModel.checkingForUpdateProperty());
+        checkBtn.setOnAction(e -> {
+            viewModel.checkForUpdatesAsync().thenAccept(info -> {
+                if (toastNotifier != null) {
+                    Platform.runLater(() -> {
+                        if (info.updateAvailable()) {
+                            toastNotifier.accept("New Version Found!", info.latestVersion() + " is available for download.");
+                        } else {
+                            toastNotifier.accept("Up to Date", "You are running the latest release.");
+                        }
+                    });
+                }
+            });
+        });
+
+        AppButton downloadBtn = AppButton.primary("Download Latest Release");
+        downloadBtn.visibleProperty().bind(viewModel.updateAvailableProperty());
+        downloadBtn.managedProperty().bind(viewModel.updateAvailableProperty());
+        downloadBtn.setOnAction(e -> {
+            String url = viewModel.updateDownloadUrlProperty().get();
+            if (url == null || url.isBlank()) {
+                url = "https://github.com/Aarav-S2005/DidYouDoIt/releases";
+            }
+            try {
+                java.awt.Desktop.getDesktop().browse(java.net.URI.create(url));
+            } catch (Exception ex) {
+                if (toastNotifier != null) toastNotifier.accept("Open Link Failed", url);
+            }
+        });
+
+        actionsRow.getChildren().addAll(checkBtn, downloadBtn);
+
+        box.getChildren().addAll(versionRow, statusLabel, actionsRow);
+        section.getChildren().addAll(header, sectionDesc, box);
+        return section;
+    }
+
+    private ComboBox<String> create12HourComboBox(int initialHour) {
+        ComboBox<String> combo = new ComboBox<>();
         for (int i = 0; i < 24; i++) {
-            combo.getItems().add(i);
+            combo.getItems().add(format12HourString(i));
         }
-        combo.setValue(initialHour);
+        combo.setValue(format12HourString(initialHour));
         return combo;
+    }
+
+    private static String format12HourString(int hour24) {
+        if (hour24 == 0) return "12:00 AM (Midnight)";
+        if (hour24 == 12) return "12:00 PM (Noon)";
+        if (hour24 < 12) return String.format("%02d:00 AM", hour24);
+        return String.format("%02d:00 PM", hour24 - 12);
+    }
+
+    private static int parse12HourString(String formatted, int fallback) {
+        if (formatted == null) return fallback;
+        if (formatted.contains("Midnight")) return 0;
+        if (formatted.contains("Noon")) return 12;
+
+        try {
+            String clean = formatted.replaceAll("[^0-9APMapm]", "").trim();
+            boolean isPm = formatted.toUpperCase().contains("PM");
+            int hour = Integer.parseInt(formatted.substring(0, 2).trim());
+            if (isPm && hour < 12) hour += 12;
+            if (!isPm && hour == 12) hour = 0;
+            return hour;
+        } catch (Exception e) {
+            return fallback;
+        }
     }
 
     private Button createTextActionButton(String text, javafx.event.EventHandler<javafx.event.ActionEvent> handler) {

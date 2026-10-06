@@ -1,0 +1,197 @@
+name: Automated Release & Package Publisher
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # --------------------------------------------------------------------------
+  # 1. Build Linux Packages (.deb & portable .tar.gz)
+  # --------------------------------------------------------------------------
+  build-linux:
+    name: Build Linux Distribution
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Install Packaging Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fakeroot rpm libasound2t64 libx11-6 libxext6 libxrender1 libxtst6 libxi6 || sudo apt-get install -y fakeroot rpm libasound2 libx11-6 libxext6 libxrender1 libxtst6 libxi6
+
+      - name: Build Application Fat JAR
+        run: |
+          cd app
+          chmod +x mvnw
+          ./mvnw clean package -DskipTests
+
+      - name: Package Linux Artifacts
+        run: |
+          JAR_PATH="app/target/DidYouDoIt-1.0.1-all.jar"
+          if [ ! -f "$JAR_PATH" ]; then
+            JAR_PATH=$(find app/target -name "DidYouDoIt-*-all.jar" -o -name "DidYouDoIt-*.jar" | head -n 1)
+          fi
+          JAR_NAME=$(basename "$JAR_PATH")
+          TAG_NAME="${GITHUB_REF_NAME:-1.0.1}"
+          VERSION="${TAG_NAME#v}"
+          mkdir -p packaging/linux/output
+
+          # 1. Debian / Ubuntu package (.deb)
+          jpackage \
+            --type deb \
+            --input app/target \
+            --main-jar "${JAR_NAME}" \
+            --main-class com.aarav.didyoudoit.Main \
+            --name didyoudoit \
+            --app-version "${VERSION}" \
+            --icon app/src/main/resources/icons/app-icon.png \
+            --linux-shortcut \
+            --dest packaging/linux/output
+
+          # 2. Standalone portable archive (.tar.gz)
+          jpackage \
+            --type app-image \
+            --input app/target \
+            --main-jar "${JAR_NAME}" \
+            --main-class com.aarav.didyoudoit.Main \
+            --name didyoudoit \
+            --app-version "${VERSION}" \
+            --icon app/src/main/resources/icons/app-icon.png \
+            --dest packaging/linux/output
+
+          cd packaging/linux/output
+          tar -czvf "didyoudoit-${VERSION}-linux-x64.tar.gz" didyoudoit
+          rm -rf didyoudoit
+
+      - name: Upload Linux Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-packages
+          path: |
+            packaging/linux/output/*.deb
+            packaging/linux/output/*.tar.gz
+
+  # --------------------------------------------------------------------------
+  # 2. Build Windows Packages (Portable .zip & .msi)
+  # --------------------------------------------------------------------------
+  build-windows:
+    name: Build Windows Distribution
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build Application Fat JAR
+        run: |
+          cd app
+          .\mvnw.cmd clean package -DskipTests
+
+      - name: Package Windows Artifacts
+        run: |
+          $JarPath = (Get-ChildItem -Path "app/target" -Filter "DidYouDoIt-*-all.jar" | Select-Object -First 1).FullName
+          if (-not $JarPath) {
+            $JarPath = (Get-ChildItem -Path "app/target" -Filter "DidYouDoIt-*.jar" | Select-Object -First 1).FullName
+          }
+
+          $TagName = if ($env:GITHUB_REF_NAME) { $env:GITHUB_REF_NAME } else { "1.0.1" }
+          $Version = $TagName.TrimStart("v")
+
+          $OutDir = "packaging/windows/output"
+          New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
+          New-Item -ItemType Directory -Force -Path "packaging/windows/staging/jars" | Out-Null
+          Copy-Item $JarPath "packaging/windows/staging/jars/DidYouDoIt.jar"
+
+          $Icon = "app/src/main/resources/icons/app-icon.ico"
+          if (-not (Test-Path $Icon)) {
+            $Icon = "app/src/main/resources/icons/app-icon.png"
+          }
+
+          # 1. Portable app-image and .zip
+          jpackage `
+            --type app-image `
+            --input "packaging/windows/staging/jars" `
+            --main-jar "DidYouDoIt.jar" `
+            --main-class "com.aarav.didyoudoit.Main" `
+            --name "DidYouDoIt" `
+            --app-version $Version `
+            --vendor "Aarav" `
+            --icon $Icon `
+            --dest $OutDir
+
+          $ZipName = "DidYouDoIt-Windows-Portable-v$Version.zip"
+          Compress-Archive -Path "$OutDir/DidYouDoIt/*" -DestinationPath "$OutDir/$ZipName" -Force
+
+          # 2. MSI installer
+          jpackage `
+            --type msi `
+            --input "packaging/windows/staging/jars" `
+            --main-jar "DidYouDoIt.jar" `
+            --main-class "com.aarav.didyoudoit.Main" `
+            --name "DidYouDoIt" `
+            --app-version $Version `
+            --vendor "Aarav" `
+            --icon $Icon `
+            --win-menu `
+            --win-shortcut `
+            --win-dir-chooser `
+            --dest $OutDir
+
+      - name: Upload Windows Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-packages
+          path: |
+            packaging/windows/output/*.zip
+            packaging/windows/output/*.msi
+
+  # --------------------------------------------------------------------------
+  # 3. Publish to GitHub Releases Automatically
+  # --------------------------------------------------------------------------
+  publish-release:
+    name: Publish Release with Assets
+    needs: [build-linux, build-windows]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Download Linux Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-packages
+          path: release-assets/
+
+      - name: Download Windows Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-packages
+          path: release-assets/
+
+      - name: Create & Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: DidYouDoIt ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            release-assets/*
