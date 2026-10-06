@@ -1,0 +1,209 @@
+/* ==========================================================================
+   DidYouDoIt - Central Application Theme
+   Fonts: Delius (Primary UI), Indie Flower (Accents), Cookie (Hero Logo)
+   ========================================================================== */
+
+.root {
+    -fx-base: #FAF7F2;
+    -fx-background-color: #FAF7F2;
+    -fx-font-family: "Delius", "Segoe UI", sans-serif;
+    -fx-font-size: 14px;
+    -fx-text-fill: #2B2D42;
+}
+
+/* --------------------------------------------------------------------------
+   Typography
+   -------------------------------------------------------------------------- */
+.font-hero {
+    -fx-font-family: "Cookie", cursive;
+    -fx-font-size: 38px;
+    -fx-text-fill: #E27D60;
+}
+
+.font-accent {
+    -fx-font-family: "Indie Flower", cursive;
+    -fx-font-size: 16px;
+    -fx-text-fill: #6C757D;
+}
+
+.font-primary {
+    -fx-font-family: "Delius", sans-serif;
+}
+
+.heading-title {
+    -fx-font-family: "Cookie", cursive;
+    -fx-font-size: 42px;
+    -fx-text-fill: #E27D60;
+    -fx-effect: dropshadow(three-pass-box, rgba(226, 125, 96, 0.25), 8, 0, 0, 3);
+}
+
+.heading-subtitle {
+    -fx-font-family: "Indie Flower", cursive;
+    -fx-font-size: 18px;
+    -fx-text-fill: #6C757D;
+}
+
+.section-header {
+    -fx-font-family: "Delius", sans-serif;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2B2D42;
+}
+
+.body-text {
+    -fx-font-family: "Delius", sans-serif;
+    -fx-font-size: 14px;
+    -fx-text-fill: #2B2D42;
+}
+
+.caption-text {
+    -fx-font-family: "Delius", sans-serif;
+    -fx-font-size: 12px;
+    -fx-text-fill: #6C757D;
+}
+
+/* --------------------------------------------------------------------------
+   Surfaces and Cards
+   -------------------------------------------------------------------------- */
+.app-container {
+    -fx-background-color: #FAF7F2;
+    -fx-padding: 24px;
+}
+
+.card {
+    -fx-background-color: #FFFFFF;
+    -fx-background-radius: 14px;
+    -fx-border-color: #E5DFD7;
+    -fx-border-radius: 14px;
+    -fx-border-width: 1px;
+    -fx-padding: 20px;
+    -fx-effect: dropshadow(three-pass-box, rgba(43, 45, 66, 0.08), 14, 0, 0, 4);
+}
+
+.card-elevated {
+    -fx-background-color: #FFFFFF;
+    -fx-background-radius: 16px;
+    -fx-border-color: #E27D60;
+    -fx-border-radius: 16px;
+    -fx-border-width: 1px;
+    -fx-padding: 24px;
+    -fx-effect: dropshadow(three-pass-box, rgba(226, 125, 96, 0.14), 20, 0, 0, 6);
+}
+
+/* --------------------------------------------------------------------------
+   Buttons
+   -------------------------------------------------------------------------- */
+.button {
+    -fx-font-family: "Delius", sans-serif;
+    -fx-font-size: 14px;
+    -fx-background-radius: 10px;
+    -fx-border-radius: 10px;
+    -fx-cursor: hand;
+    -fx-padding: 8px 18px;
+    -fx-focus-traversable: true;
+}
+
+.button:focused {
+    -fx-border-color: #E27D60;
+    -fx-border-width: 2px;
+}
+
+.btn-primary {
+    -fx-background-color: #E27D60;
+    -fx-text-fill: #FFFFFF;
+    -fx-font-weight: bold;
+    -fx-effect: dropshadow(three-pass-box, rgba(226, 125, 96, 0.35), 8, 0, 0, 2);
+}
+
+.btn-primary:hover {
+    -fx-background-color: #D46B4E;
+    -fx-effect: dropshadow(three-pass-box, rgba(212, 107, 78, 0.45), 10, 0, 0, 3);
+}
+
+.btn-primary:armed {
+    -fx-background-color: #C05B40;
+}
+
+.btn-secondary {
+    -fx-background-color: #85B79D;
+    -fx-text-fill: #FFFFFF;
+    -fx-font-weight: bold;
+    -fx-effect: dropshadow(three-pass-box, rgba(133, 183, 157, 0.35), 8, 0, 0, 2);
+}
+
+.btn-secondary:hover {
+    -fx-background-color: #74A68C;
+}
+
+.btn-ghost {
+    -fx-background-color: transparent;
+    -fx-text-fill: #2B2D42;
+    -fx-border-color: #E5DFD7;
+    -fx-border-width: 1.5px;
+}
+
+.btn-ghost:hover {
+    -fx-background-color: #F3EFEA;
+    -fx-border-color: #D46B4E;
+}
+
+.btn-danger {
+    -fx-background-color: #E76F51;
+    -fx-text-fill: #FFFFFF;
+    -fx-font-weight: bold;
+}
+
+.btn-danger:hover {
+    -fx-background-color: #D45B3E;
+}
+
+/* --------------------------------------------------------------------------
+   Badges and Chips
+   -------------------------------------------------------------------------- */
+.badge {
+    -fx-font-family: "Delius", sans-serif;
+    -fx-font-size: 12px;
+    -fx-background-radius: 999px;
+    -fx-padding: 3px 10px;
+    -fx-font-weight: bold;
+}
+
+.badge-urgent {
+    -fx-background-color: #FDF0ED;
+    -fx-text-fill: #E76F51;
+    -fx-border-color: #F8C3B8;
+    -fx-border-radius: 999px;
+    -fx-border-width: 1px;
+}
+
+.badge-high {
+    -fx-background-color: #FEF6EC;
+    -fx-text-fill: #E78C3B;
+    -fx-border-color: #FBDCB7;
+    -fx-border-radius: 999px;
+    -fx-border-width: 1px;
+}
+
+.badge-medium {
+    -fx-background-color: #FDF9EA;
+    -fx-text-fill: #B88E18;
+    -fx-border-color: #F8E7AC;
+    -fx-border-radius: 999px;
+    -fx-border-width: 1px;
+}
+
+.badge-low {
+    -fx-background-color: #EEF8F6;
+    -fx-text-fill: #288F80;
+    -fx-border-color: #BBE5DF;
+    -fx-border-radius: 999px;
+    -fx-border-width: 1px;
+}
+
+.badge-success {
+    -fx-background-color: #EAF6F3;
+    -fx-text-fill: #2A9D8F;
+    -fx-border-color: #B2DFD8;
+    -fx-border-radius: 999px;
+    -fx-border-width: 1px;
+}
