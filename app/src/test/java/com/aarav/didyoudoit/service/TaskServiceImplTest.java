@@ -143,9 +143,15 @@ class TaskServiceImplTest {
 
         taskService.recordNag(created.getId());
 
-        Task nagged = taskService.getTask(created.getId()).orElseThrow();
-        assertEquals(1, nagged.getNagCount());
-        assertEquals(EscalationLevel.NUDGE, nagged.getEscalationLevel());
-        assertEquals(TaskStatus.OVERDUE, nagged.getStatus());
+        Task nagged1 = taskService.getTask(created.getId()).orElseThrow();
+        assertEquals(1, nagged1.getNagCount());
+        assertEquals(EscalationLevel.INITIAL, nagged1.getEscalationLevel());
+
+        taskService.recordNag(created.getId());
+
+        Task nagged2 = taskService.getTask(created.getId()).orElseThrow();
+        assertEquals(2, nagged2.getNagCount());
+        assertEquals(EscalationLevel.NUDGE, nagged2.getEscalationLevel());
+        assertEquals(TaskStatus.OVERDUE, nagged2.getStatus());
     }
 }

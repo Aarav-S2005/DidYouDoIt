@@ -11,6 +11,7 @@ import javafx.application.Platform;
 import javafx.beans.property.*;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.time.LocalTime;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -43,12 +44,19 @@ public class SettingsViewModel {
     private final com.aarav.didyoudoit.service.UpdateService updateService;
 
     // In-app update properties
-    private final StringProperty appVersion = new SimpleStringProperty("1.1.0");
+    private final StringProperty appVersion = new SimpleStringProperty(com.aarav.didyoudoit.util.AppVersion.get());
     private final BooleanProperty checkingForUpdate = new SimpleBooleanProperty(false);
     private final BooleanProperty updateAvailable = new SimpleBooleanProperty(false);
     private final StringProperty latestVersionString = new SimpleStringProperty("v1.1.0");
     private final StringProperty updateDownloadUrl = new SimpleStringProperty("");
+    private final StringProperty updateMsiUrl = new SimpleStringProperty("");
+    private final StringProperty updateZipUrl = new SimpleStringProperty("");
+    private final StringProperty updateDebUrl = new SimpleStringProperty("");
+    private final StringProperty updateTarGzUrl = new SimpleStringProperty("");
+    private final StringProperty updateReleaseUrl = new SimpleStringProperty("");
     private final StringProperty updateStatusMessage = new SimpleStringProperty("You are on the latest version.");
+    private final BooleanProperty downloadingUpdate = new SimpleBooleanProperty(false);
+    private final DoubleProperty downloadProgress = new SimpleDoubleProperty(0.0);
 
     public SettingsViewModel(SettingsService settingsService,
                              PersonalityMessageService personalityMessageService,
@@ -111,11 +119,13 @@ public class SettingsViewModel {
      */
     public void updatePreviewQuote(PersonalityType personality) {
         if (personality == null) return;
-        Task dummy = Task.builder().title("Finish Project Report").build();
+        Task initialTask = Task.builder().title("Finish Project Report").nagCount(0).build();
+        Task nudgeTask = Task.builder().title("Finish Project Report").nagCount(2).build();
+        Task criticalTask = Task.builder().title("Finish Project Report").nagCount(7).build();
 
-        var initial = personalityMessageService.generateMessage(dummy, personality, 0);
-        var nudge = personalityMessageService.generateMessage(dummy, personality, 10);
-        var critical = personalityMessageService.generateMessage(dummy, personality, 60);
+        var initial = personalityMessageService.generateMessage(initialTask, personality, 0);
+        var nudge = personalityMessageService.generateMessage(nudgeTask, personality, 10);
+        var critical = personalityMessageService.generateMessage(criticalTask, personality, 60);
 
         String preview = String.format(
                 "Initial: \"%s - %s\"\nNudge: \"%s - %s\"\nUrgent: \"%s - %s\"",
@@ -211,6 +221,11 @@ public class SettingsViewModel {
                 updateAvailable.set(info.updateAvailable());
                 latestVersionString.set(info.latestVersion());
                 updateDownloadUrl.set(info.downloadUrl());
+                updateMsiUrl.set(info.msiUrl() != null ? info.msiUrl() : "");
+                updateZipUrl.set(info.zipUrl() != null ? info.zipUrl() : "");
+                updateDebUrl.set(info.debUrl() != null ? info.debUrl() : "");
+                updateTarGzUrl.set(info.tarGzUrl() != null ? info.tarGzUrl() : "");
+                updateReleaseUrl.set(info.releaseUrl() != null ? info.releaseUrl() : "");
 
                 if (info.updateAvailable()) {
                     updateStatusMessage.set("Update Available! " + info.latestVersion() + " is ready to install.");
@@ -222,13 +237,65 @@ public class SettingsViewModel {
         });
     }
 
+    public CompletableFuture<Void> downloadAndInstallUpdateAsync() {
+        boolean isWindows = System.getProperty("os.name", "").toLowerCase().contains("win");
+        String targetUrl = isWindows ? updateMsiUrl.get() : updateDebUrl.get();
+        if (targetUrl == null || targetUrl.isBlank()) {
+            targetUrl = updateDownloadUrl.get();
+        }
+        if (targetUrl == null || targetUrl.isBlank()) {
+            updateStatusMessage.set("No download URL found for this release.");
+            return CompletableFuture.completedFuture(null);
+        }
+
+        downloadingUpdate.set(true);
+        downloadProgress.set(0.0);
+        updateStatusMessage.set("Downloading update package (0%)...");
+
+        return updateService.downloadAssetAsync(targetUrl, progress -> {
+            runOnFxThread(() -> {
+                downloadProgress.set(progress);
+                updateStatusMessage.set(String.format("Downloading update: %d%%", (int) (progress * 100)));
+            });
+        }).thenAccept(downloadedFile -> {
+            runOnFxThread(() -> {
+                downloadingUpdate.set(false);
+                updateStatusMessage.set("Download complete! Launching installer...");
+                try {
+                    if (isWindows && downloadedFile.toString().endsWith(".msi")) {
+                        new ProcessBuilder("msiexec.exe", "/i", downloadedFile.toAbsolutePath().toString()).start();
+                        updateStatusMessage.set("Installer started! Follow the setup wizard to update in-place.");
+                    } else {
+                        java.awt.Desktop.getDesktop().open(downloadedFile.toFile());
+                        updateStatusMessage.set("Package opened! Follow your system installer prompt.");
+                    }
+                } catch (Exception ex) {
+                    updateStatusMessage.set("Failed to launch installer automatically. Saved to: " + downloadedFile.getFileName());
+                }
+            });
+        }).exceptionally(ex -> {
+            runOnFxThread(() -> {
+                downloadingUpdate.set(false);
+                updateStatusMessage.set("Update download failed: " + ex.getMessage());
+            });
+            return null;
+        });
+    }
+
     // Property getters
     public StringProperty appVersionProperty() { return appVersion; }
     public BooleanProperty checkingForUpdateProperty() { return checkingForUpdate; }
     public BooleanProperty updateAvailableProperty() { return updateAvailable; }
     public StringProperty latestVersionStringProperty() { return latestVersionString; }
     public StringProperty updateDownloadUrlProperty() { return updateDownloadUrl; }
+    public StringProperty updateMsiUrlProperty() { return updateMsiUrl; }
+    public StringProperty updateZipUrlProperty() { return updateZipUrl; }
+    public StringProperty updateDebUrlProperty() { return updateDebUrl; }
+    public StringProperty updateTarGzUrlProperty() { return updateTarGzUrl; }
+    public StringProperty updateReleaseUrlProperty() { return updateReleaseUrl; }
     public StringProperty updateStatusMessageProperty() { return updateStatusMessage; }
+    public BooleanProperty downloadingUpdateProperty() { return downloadingUpdate; }
+    public DoubleProperty downloadProgressProperty() { return downloadProgress; }
 
     public ObjectProperty<PersonalityType> personalityTypeProperty() { return personalityType; }
     public BooleanProperty quietHoursEnabledProperty() { return quietHoursEnabled; }

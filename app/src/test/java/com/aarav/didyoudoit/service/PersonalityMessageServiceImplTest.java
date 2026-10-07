@@ -23,25 +23,29 @@ class PersonalityMessageServiceImplTest {
     void testMessageGenerationAcrossPersonalities() {
         Task task = Task.builder().title("File Tax Return").build();
 
-        // Gentle Initial
+        // Gentle Initial (nagCount = 0)
+        task.setNagCount(0);
         PersonalityMessageService.NagMessage gentle = messageService.generateMessage(task, PersonalityType.GENTLE, 0);
         assertTrue(gentle.title().contains("File Tax Return"));
         assertFalse(gentle.body().isBlank());
         assertEquals(EscalationLevel.INITIAL, gentle.level());
 
-        // Strict Nudge
+        // Strict Nudge (nagCount = 2)
+        task.setNagCount(2);
         PersonalityMessageService.NagMessage strict = messageService.generateMessage(task, PersonalityType.STRICT, 10);
         assertTrue(strict.title().contains("File Tax Return"));
         assertFalse(strict.body().isBlank());
         assertEquals(EscalationLevel.NUDGE, strict.level());
 
-        // Sarcastic Warn
+        // Sarcastic Warn (nagCount = 4)
+        task.setNagCount(4);
         PersonalityMessageService.NagMessage sarcastic = messageService.generateMessage(task, PersonalityType.SARCASTIC, 25);
         assertTrue(sarcastic.title().contains("File Tax Return"));
         assertFalse(sarcastic.body().isBlank());
         assertEquals(EscalationLevel.WARN, sarcastic.level());
 
-        // Aggressive Critical
+        // Aggressive Critical (nagCount = 7)
+        task.setNagCount(7);
         PersonalityMessageService.NagMessage aggressive = messageService.generateMessage(task, PersonalityType.AGGRESSIVE, 60);
         assertTrue(aggressive.title().contains("File Tax Return"));
         assertFalse(aggressive.body().isBlank());

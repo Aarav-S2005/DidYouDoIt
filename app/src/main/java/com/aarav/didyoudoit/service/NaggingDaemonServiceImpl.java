@@ -28,7 +28,7 @@ import java.util.logging.Logger;
 public class NaggingDaemonServiceImpl implements NaggingDaemonService, NotificationService.NotificationActionListener {
 
     private static final Logger LOGGER = Logger.getLogger(NaggingDaemonServiceImpl.class.getName());
-    private static final long DEFAULT_POLL_INTERVAL_SECONDS = 30;
+    private static final long DEFAULT_POLL_INTERVAL_SECONDS = 15;
 
     private final TaskService taskService;
     private final SettingsService settingsService;
@@ -167,38 +167,48 @@ public class NaggingDaemonServiceImpl implements NaggingDaemonService, Notificat
                 ? task.getPostponedUntil()
                 : task.getDueDateTime();
 
-        if (effectiveDeadline == null) {
+        if (effectiveDeadline == null || now.isBefore(effectiveDeadline)) {
             return;
         }
 
-        long minutesOverdue = Math.max(0, Duration.between(effectiveDeadline, now).toMinutes());
         LocalDateTime lastNag = lastNaggedTimes.get(task.getId());
+        boolean isFirstNotificationForCycle = (lastNag == null || lastNag.isBefore(effectiveDeadline));
+
+        if (isFirstNotificationForCycle) {
+            // Initial Due Notification (FR-04): Task has just reached its deadline.
+            // Dispatch a friendly on-time notification without nagging or advancing the escalation level.
+            NagMessage dueMessage = new NagMessage(
+                    "Task Due: " + task.getTitle(),
+                    "It's time for '" + task.getTitle() + "'!",
+                    EscalationLevel.INITIAL
+            );
+
+            notificationService.notifyTask(task, dueMessage);
+            lastNaggedTimes.put(task.getId(), now);
+            LOGGER.info("Dispatched initial on-time due notification for '" + task.getTitle() + "'");
+            return;
+        }
 
         // Check if persistent nagging is disabled and task was already nagged once
         if (!settings.isPersistentNaggingEnabled() && task.getNagCount() > 0) {
             return;
         }
 
-        boolean shouldNag;
-        if (lastNag == null || lastNag.isBefore(effectiveDeadline)) {
-            // First time nag for this deadline/snooze cycle
-            shouldNag = true;
-        } else {
-            // Recurring nag: evaluate interval based on settings and priority
-            int baseInterval = settings.getEscalationIntervalMinutes();
-            int scaledInterval = calculateScaledInterval(baseInterval, task.getPriority());
-            long minutesSinceLastNag = Duration.between(lastNag, now).toMinutes();
-            shouldNag = minutesSinceLastNag >= scaledInterval;
-        }
+        // Recurring nag evaluation (FR-05, FR-06)
+        // Respect the user's explicit interval setting with exact second-level precision.
+        long secondsSinceLastNag = Duration.between(lastNag, now).getSeconds();
+        int baseIntervalMinutes = Math.max(1, settings.getEscalationIntervalMinutes());
+        long requiredSeconds = baseIntervalMinutes * 60L;
 
-        if (shouldNag) {
-            // Advance nag count and escalation in database
+        if (secondsSinceLastNag >= requiredSeconds) {
+            // The full nagging interval has elapsed. Advance nag count and escalation in database.
             taskService.recordNag(task.getId());
             lastNaggedTimes.put(task.getId(), now);
 
             // Fetch fresh state of task to ensure updated escalation level
             Task refreshedTask = taskService.getTask(task.getId()).orElse(task);
 
+            long minutesOverdue = Math.max(0, Duration.between(effectiveDeadline, now).toMinutes());
             NagMessage message = personalityMessageService.generateMessage(
                     refreshedTask,
                     settings.getPersonalityType(),
@@ -206,21 +216,9 @@ public class NaggingDaemonServiceImpl implements NaggingDaemonService, Notificat
             );
 
             notificationService.notifyTask(refreshedTask, message);
-            LOGGER.info("Dispatched nag for '" + refreshedTask.getTitle() + "' [Level: "
-                    + refreshedTask.getEscalationLevel() + ", Overdue: " + minutesOverdue + "m]");
+            LOGGER.info("Dispatched nag #" + refreshedTask.getNagCount() + " for '" + refreshedTask.getTitle()
+                    + "' [Level: " + refreshedTask.getEscalationLevel() + ", Overdue: " + minutesOverdue + "m]");
         }
-    }
-
-    private int calculateScaledInterval(int baseMinutes, Priority priority) {
-        if (priority == null) {
-            return Math.max(3, baseMinutes);
-        }
-        return switch (priority) {
-            case URGENT -> Math.max(3, (int) Math.round(baseMinutes * 0.5));
-            case HIGH -> Math.max(3, (int) Math.round(baseMinutes * 0.75));
-            case MEDIUM -> Math.max(5, baseMinutes);
-            case LOW -> Math.max(5, (int) Math.round(baseMinutes * 1.5));
-        };
     }
 
     // -------------------------------------------------------------------------

@@ -155,7 +155,7 @@ public class SqliteTaskRepository implements TaskRepository {
         String sql = """
             SELECT * FROM tasks
             WHERE is_template = 0 AND status NOT IN ('COMPLETED', 'DELETED')
-              AND COALESCE(postponed_until, due_date_time) < ?
+              AND COALESCE(postponed_until, due_date_time) <= ?
             ORDER BY COALESCE(postponed_until, due_date_time) ASC;
         """;
 

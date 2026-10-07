@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { 
-  Download, 
-  Terminal, 
-  ShieldCheck, 
-  Zap, 
-  BellRing, 
-  Sliders, 
-  CheckCircle2, 
+import {
+  Download,
+  Terminal,
+  ShieldCheck,
+  Zap,
+  BellRing,
+  Sliders,
+  CheckCircle2,
   RefreshCw,
   Monitor
 } from 'lucide-react';
@@ -95,7 +95,7 @@ function GitHubIcon({ size = 16 }: { size?: number }) {
 export function App() {
   const [selectedTone, setSelectedTone] = useState<Personality>('sarcastic');
   const [quoteIndex, setQuoteIndex] = useState(0);
-  const [releaseVersion, setReleaseVersion] = useState<string>('v1.1.0');
+  const [releaseVersion, setReleaseVersion] = useState<string>('v1.1.1');
   const [assets, setAssets] = useState<Record<string, string>>({});
   const [isFetched, setIsFetched] = useState<boolean>(false);
 
@@ -173,10 +173,10 @@ export function App() {
             <button onClick={() => scrollToSection('preview')} className="nav-link">
               Tone Simulator
             </button>
-            <a 
-              href="https://github.com/Aarav-S2005/DidYouDoIt" 
-              target="_blank" 
-              rel="noreferrer" 
+            <a
+              href="https://github.com/Aarav-S2005/DidYouDoIt"
+              target="_blank"
+              rel="noreferrer"
               className="nav-link"
               style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
             >
@@ -202,7 +202,7 @@ export function App() {
           </h1>
 
           <p className="hero-subtitle">
-            Most to-do lists just sit there quietly while deadlines slip away. DidYouDoIt? runs in 
+            Most to-do lists just sit there quietly while deadlines slip away. DidYouDoIt? runs in
             your system tray, watches your clock, and nags you with escalating accountability until you finish.
           </p>
 
@@ -210,10 +210,10 @@ export function App() {
             <button onClick={() => scrollToSection('downloads')} className="btn-primary">
               <Download size={18} /> Download for Windows & Linux
             </button>
-            <a 
-              href="https://github.com/Aarav-S2005/DidYouDoIt" 
-              target="_blank" 
-              rel="noreferrer" 
+            <a
+              href="https://github.com/Aarav-S2005/DidYouDoIt"
+              target="_blank"
+              rel="noreferrer"
               className="btn-secondary"
             >
               <GitHubIcon size={18} /> View Source Code
@@ -251,9 +251,9 @@ export function App() {
               <div className="toast-actions">
                 <button className="toast-btn toast-btn-done">Done</button>
                 <button className="toast-btn">Snooze 15m</button>
-                <button 
+                <button
                   onClick={handleNextQuote}
-                  title="Randomize Quote" 
+                  title="Randomize Quote"
                   className="toast-btn"
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
                 >

@@ -37,15 +37,7 @@ public class PersonalityMessageServiceImpl implements PersonalityMessageService 
     }
 
     private EscalationLevel calculateEscalationLevel(int minutesOverdue, int nagCount) {
-        if (minutesOverdue > 45 || nagCount >= 3) {
-            return EscalationLevel.CRITICAL;
-        } else if (minutesOverdue > 15 || nagCount >= 2) {
-            return EscalationLevel.WARN;
-        } else if (minutesOverdue > 0 || nagCount >= 1) {
-            return EscalationLevel.NUDGE;
-        } else {
-            return EscalationLevel.INITIAL;
-        }
+        return EscalationLevel.fromNagCount(nagCount);
     }
 
     // -------------------------------------------------------------------------

@@ -35,6 +35,25 @@ public enum EscalationLevel {
         return INITIAL;
     }
 
+    /**
+     * Resolves the escalation intensity level based on persistent nag count:
+     * - INITIAL:  nagCount < 2 (0, 1)
+     * - NUDGE:    nagCount 2 to 3
+     * - WARN:     nagCount 4 to 6
+     * - CRITICAL: nagCount >= 7
+     */
+    public static EscalationLevel fromNagCount(int nagCount) {
+        if (nagCount >= 7) {
+            return CRITICAL;
+        } else if (nagCount >= 4) {
+            return WARN;
+        } else if (nagCount >= 2) {
+            return NUDGE;
+        } else {
+            return INITIAL;
+        }
+    }
+
     public EscalationLevel next() {
         return switch (this) {
             case INITIAL -> NUDGE;

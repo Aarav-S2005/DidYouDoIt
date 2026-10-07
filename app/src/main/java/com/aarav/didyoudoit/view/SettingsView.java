@@ -451,7 +451,8 @@ public class SettingsView extends ScrollPane {
         currentVerLabel.setFont(FontManager.getPrimaryFont(13));
         currentVerLabel.setStyle("-fx-font-weight: bold;");
 
-        Label currentVerBadge = new Label("v" + viewModel.appVersionProperty().get());
+        Label currentVerBadge = new Label();
+        currentVerBadge.textProperty().bind(viewModel.appVersionProperty().map(v -> "v" + v));
         currentVerBadge.getStyleClass().addAll("badge", "badge-default-chip");
 
         versionRow.getChildren().addAll(currentVerLabel, currentVerBadge);
@@ -460,17 +461,26 @@ public class SettingsView extends ScrollPane {
         statusLabel.setFont(FontManager.getPrimaryFont(12.5));
         statusLabel.textProperty().bind(viewModel.updateStatusMessageProperty());
 
-        HBox actionsRow = new HBox(Theme.SPACING_MD);
-        actionsRow.setAlignment(Pos.CENTER_LEFT);
+        ProgressBar progressBar = new ProgressBar(0.0);
+        progressBar.setMaxWidth(Double.MAX_VALUE);
+        progressBar.progressProperty().bind(viewModel.downloadProgressProperty());
+        progressBar.visibleProperty().bind(viewModel.downloadingUpdateProperty());
+        progressBar.managedProperty().bind(viewModel.downloadingUpdateProperty());
+
+        boolean isWindows = System.getProperty("os.name", "").toLowerCase().contains("win");
+
+        // Primary actions row (Check + Update In-Place)
+        HBox primaryActionsRow = new HBox(Theme.SPACING_MD);
+        primaryActionsRow.setAlignment(Pos.CENTER_LEFT);
 
         AppButton checkBtn = AppButton.secondary("Check for Updates Now");
-        checkBtn.disableProperty().bind(viewModel.checkingForUpdateProperty());
+        checkBtn.disableProperty().bind(viewModel.checkingForUpdateProperty().or(viewModel.downloadingUpdateProperty()));
         checkBtn.setOnAction(e -> {
             viewModel.checkForUpdatesAsync().thenAccept(info -> {
                 if (toastNotifier != null) {
                     Platform.runLater(() -> {
                         if (info.updateAvailable()) {
-                            toastNotifier.accept("New Version Found!", info.latestVersion() + " is available for download.");
+                            toastNotifier.accept("New Version Found!", info.latestVersion() + " is available for update.");
                         } else {
                             toastNotifier.accept("Up to Date", "You are running the latest release.");
                         }
@@ -479,26 +489,68 @@ public class SettingsView extends ScrollPane {
             });
         });
 
-        AppButton downloadBtn = AppButton.primary("Download Latest Release");
-        downloadBtn.visibleProperty().bind(viewModel.updateAvailableProperty());
-        downloadBtn.managedProperty().bind(viewModel.updateAvailableProperty());
-        downloadBtn.setOnAction(e -> {
-            String url = viewModel.updateDownloadUrlProperty().get();
-            if (url == null || url.isBlank()) {
-                url = "https://github.com/Aarav-S2005/DidYouDoIt/releases";
-            }
-            try {
-                java.awt.Desktop.getDesktop().browse(java.net.URI.create(url));
-            } catch (Exception ex) {
-                if (toastNotifier != null) toastNotifier.accept("Open Link Failed", url);
-            }
+        // In-place one-click upgrade button
+        AppButton autoUpdateBtn = AppButton.primary(isWindows ? "⚡ Update Now (In-Place MSI)" : "⚡ Update Now (.deb Package)");
+        autoUpdateBtn.visibleProperty().bind(viewModel.updateAvailableProperty());
+        autoUpdateBtn.managedProperty().bind(viewModel.updateAvailableProperty());
+        autoUpdateBtn.disableProperty().bind(viewModel.downloadingUpdateProperty());
+        autoUpdateBtn.setOnAction(e -> {
+            viewModel.downloadAndInstallUpdateAsync();
         });
 
-        actionsRow.getChildren().addAll(checkBtn, downloadBtn);
+        primaryActionsRow.getChildren().addAll(checkBtn, autoUpdateBtn);
 
-        box.getChildren().addAll(versionRow, statusLabel, actionsRow);
+        // Download options row (MSI / ZIP on Windows, DEB / TAR.GZ on Linux)
+        VBox downloadOptionsBox = new VBox(Theme.SPACING_SM);
+        downloadOptionsBox.visibleProperty().bind(viewModel.updateAvailableProperty());
+        downloadOptionsBox.managedProperty().bind(viewModel.updateAvailableProperty());
+
+        Label downloadOptionsLabel = new Label("Alternative Download Options:");
+        downloadOptionsLabel.setFont(FontManager.getPrimaryFont(12));
+        downloadOptionsLabel.getStyleClass().add("caption-text");
+
+        HBox formatButtonsRow = new HBox(Theme.SPACING_SM);
+        formatButtonsRow.setAlignment(Pos.CENTER_LEFT);
+
+        if (isWindows) {
+            AppButton msiBtn = AppButton.secondary("Download .msi (Installer)");
+            msiBtn.setOnAction(e -> openUrl(viewModel.updateMsiUrlProperty().get(), viewModel.updateReleaseUrlProperty().get()));
+
+            AppButton zipBtn = AppButton.secondary("Download .zip (Portable)");
+            zipBtn.setOnAction(e -> openUrl(viewModel.updateZipUrlProperty().get(), viewModel.updateReleaseUrlProperty().get()));
+
+            formatButtonsRow.getChildren().addAll(msiBtn, zipBtn);
+        } else {
+            AppButton debBtn = AppButton.secondary("Download .deb (Debian/Ubuntu)");
+            debBtn.setOnAction(e -> openUrl(viewModel.updateDebUrlProperty().get(), viewModel.updateReleaseUrlProperty().get()));
+
+            AppButton tarBtn = AppButton.secondary("Download .tar.gz (Portable)");
+            tarBtn.setOnAction(e -> openUrl(viewModel.updateTarGzUrlProperty().get(), viewModel.updateReleaseUrlProperty().get()));
+
+            formatButtonsRow.getChildren().addAll(debBtn, tarBtn);
+        }
+
+        AppButton releaseNotesBtn = AppButton.secondary("View Release Notes");
+        releaseNotesBtn.setOnAction(e -> openUrl(viewModel.updateReleaseUrlProperty().get(), "https://github.com/Aarav-S2005/DidYouDoIt/releases"));
+
+        formatButtonsRow.getChildren().add(releaseNotesBtn);
+        downloadOptionsBox.getChildren().addAll(downloadOptionsLabel, formatButtonsRow);
+
+        box.getChildren().addAll(versionRow, statusLabel, progressBar, primaryActionsRow, downloadOptionsBox);
         section.getChildren().addAll(header, sectionDesc, box);
         return section;
+    }
+
+    private void openUrl(String targetUrl, String fallbackUrl) {
+        String url = (targetUrl != null && !targetUrl.isBlank()) ? targetUrl : fallbackUrl;
+        if (url == null || url.isBlank()) {
+            url = "https://github.com/Aarav-S2005/DidYouDoIt/releases";
+        }
+        try {
+            java.awt.Desktop.getDesktop().browse(java.net.URI.create(url));
+        } catch (Exception ex) {
+            if (toastNotifier != null) toastNotifier.accept("Open Link Failed", url);
+        }
     }
 
     private ComboBox<String> create12HourComboBox(int initialHour) {

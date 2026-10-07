@@ -192,12 +192,13 @@ public class Task {
 
     public void setNagCount(int nagCount) {
         this.nagCount = Math.max(0, nagCount);
+        this.escalationLevel = EscalationLevel.fromNagCount(this.nagCount);
         this.updatedAt = LocalDateTime.now();
     }
 
     public void incrementNagCount() {
         this.nagCount++;
-        this.escalationLevel = this.escalationLevel.next();
+        this.escalationLevel = EscalationLevel.fromNagCount(this.nagCount);
         this.updatedAt = LocalDateTime.now();
     }
 

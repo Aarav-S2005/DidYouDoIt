@@ -104,7 +104,7 @@ class NaggingDaemonServiceTest {
     }
 
     @Test
-    @DisplayName("Overdue task triggers nagging notification and increments nag count")
+    @DisplayName("Due task triggers initial notification, then subsequent pass after interval triggers nag")
     void testOverdueTaskTriggersNag() {
         // Task due at 8:30 (current clock is 9:00 -> 30 mins overdue)
         Task overdueTask = taskService.createTask(Task.builder()
@@ -114,14 +114,23 @@ class NaggingDaemonServiceTest {
                 .category(TaskCategory.WORK)
                 .build());
 
+        // First pass: on-time due notification sent (not a nag, nag count = 0)
         daemonService.checkAndNagNow();
 
-        assertEquals(1, notificationService.notifiedTasks.size(), "Should dispatch 1 notification");
+        assertEquals(1, notificationService.notifiedTasks.size(), "Should dispatch initial due notification");
         assertEquals("Submit Tax Documents", notificationService.notifiedTasks.get(0).getTitle());
         assertNotNull(notificationService.messages.get(0));
 
+        Task initial = taskService.getTask(overdueTask.getId()).orElseThrow();
+        assertEquals(0, initial.getNagCount(), "Initial due notification must NOT increment nag count");
+
+        // Advance clock past the escalation interval (10 mins default)
+        clockService.advanceMinutes(11);
+        daemonService.checkAndNagNow();
+
+        assertEquals(2, notificationService.notifiedTasks.size(), "Should dispatch first nag");
         Task refreshed = taskService.getTask(overdueTask.getId()).orElseThrow();
-        assertEquals(1, refreshed.getNagCount(), "Nag count should have incremented to 1");
+        assertEquals(1, refreshed.getNagCount(), "First nag should increment nag count to 1");
     }
 
     @Test
@@ -177,22 +186,29 @@ class NaggingDaemonServiceTest {
                 .category(TaskCategory.WORK)
                 .build());
 
-        // First pass -> nag dispatched
+        // First pass -> initial due notification dispatched (nag count = 0)
         daemonService.checkAndNagNow();
         assertEquals(1, notificationService.notifiedTasks.size());
+        assertEquals(0, taskService.getTask(task.getId()).orElseThrow().getNagCount());
 
         // Advance clock by 3 minutes (less than 10 mins)
         clockService.advanceMinutes(3);
         daemonService.checkAndNagNow();
         assertEquals(1, notificationService.notifiedTasks.size(), "Should NOT nag before interval elapsed");
 
-        // Advance clock past the 10 min interval (total +11 minutes)
+        // Advance clock past the 10 min interval (total +11 minutes from initial)
         clockService.advanceMinutes(8);
         daemonService.checkAndNagNow();
-        assertEquals(2, notificationService.notifiedTasks.size(), "Should dispatch second escalated nag");
+        assertEquals(2, notificationService.notifiedTasks.size(), "Should dispatch first escalated nag");
 
         Task refreshed = taskService.getTask(task.getId()).orElseThrow();
-        assertEquals(2, refreshed.getNagCount());
+        assertEquals(1, refreshed.getNagCount());
+
+        // Advance clock past another 10 min interval
+        clockService.advanceMinutes(11);
+        daemonService.checkAndNagNow();
+        assertEquals(3, notificationService.notifiedTasks.size(), "Should dispatch second escalated nag");
+        assertEquals(2, taskService.getTask(task.getId()).orElseThrow().getNagCount());
     }
 
     @Test
