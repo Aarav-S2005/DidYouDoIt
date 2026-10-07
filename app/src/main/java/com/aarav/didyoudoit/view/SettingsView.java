@@ -299,9 +299,13 @@ public class SettingsView extends ScrollPane {
 
         // Escalation interval combo
         VBox intervalBox = new VBox(Theme.SPACING_XS);
-        Label intervalLabel = new Label("Nagging Follow-up Frequency (how often to remind you while a task is overdue):");
-        intervalLabel.setFont(FontManager.getPrimaryFont(12.5));
-        intervalLabel.setStyle("-fx-font-weight: bold;");
+        Label intervalLabel = new Label("Period (Nagging Frequency):");
+        intervalLabel.setFont(FontManager.getPrimaryFont(13));
+        intervalLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: -fx-text-primary;");
+
+        Label intervalHelp = new Label("How frequently the app nudges you while an active task remains overdue");
+        intervalHelp.setFont(FontManager.getPrimaryFont(11.5));
+        intervalHelp.getStyleClass().add("caption-text");
 
         ComboBox<String> intervalCombo = new ComboBox<>();
         intervalCombo.getItems().addAll(
@@ -327,13 +331,17 @@ public class SettingsView extends ScrollPane {
             }
         });
 
-        intervalBox.getChildren().addAll(intervalLabel, intervalCombo);
+        intervalBox.getChildren().addAll(intervalLabel, intervalHelp, intervalCombo);
 
         // Default snooze combo
         VBox snoozeBox = new VBox(Theme.SPACING_XS);
-        Label snoozeLabel = new Label("Default Notification Snooze Duration:");
-        snoozeLabel.setFont(FontManager.getPrimaryFont(12.5));
-        snoozeLabel.setStyle("-fx-font-weight: bold;");
+        Label snoozeLabel = new Label("Snooze Duration:");
+        snoozeLabel.setFont(FontManager.getPrimaryFont(13));
+        snoozeLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: -fx-text-primary;");
+
+        Label snoozeHelp = new Label("How long reminders pause when you click 'Snooze' on a notification or task card");
+        snoozeHelp.setFont(FontManager.getPrimaryFont(11.5));
+        snoozeHelp.getStyleClass().add("caption-text");
 
         ComboBox<String> snoozeCombo = new ComboBox<>();
         snoozeCombo.getItems().addAll("5 minutes", "10 minutes", "15 minutes (Recommended)", "30 minutes", "60 minutes");
@@ -353,7 +361,7 @@ public class SettingsView extends ScrollPane {
             }
         });
 
-        snoozeBox.getChildren().addAll(snoozeLabel, snoozeCombo);
+        snoozeBox.getChildren().addAll(snoozeLabel, snoozeHelp, snoozeCombo);
 
         box.getChildren().addAll(autoStartCheck, new Separator(), intervalBox, snoozeBox);
         section.getChildren().addAll(header, sectionDesc, box);

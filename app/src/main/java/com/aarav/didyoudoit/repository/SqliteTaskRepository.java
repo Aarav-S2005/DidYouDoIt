@@ -36,8 +36,10 @@ public class SqliteTaskRepository implements TaskRepository {
                 id, title, description, category, priority, due_date_time,
                 recurrence_type, recurrence_time, recurrence_day_of_week,
                 status, completed_at, postponed_until, nag_count, escalation_level,
-                custom_nag_message, is_template, parent_template_id, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                custom_nag_message, is_template, parent_template_id,
+                duration_minutes, timer_remaining_seconds, timer_active,
+                created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 title = excluded.title,
                 description = excluded.description,
@@ -55,6 +57,9 @@ public class SqliteTaskRepository implements TaskRepository {
                 custom_nag_message = excluded.custom_nag_message,
                 is_template = excluded.is_template,
                 parent_template_id = excluded.parent_template_id,
+                duration_minutes = excluded.duration_minutes,
+                timer_remaining_seconds = excluded.timer_remaining_seconds,
+                timer_active = excluded.timer_active,
                 updated_at = excluded.updated_at;
         """;
 
@@ -338,8 +343,11 @@ public class SqliteTaskRepository implements TaskRepository {
         ps.setString(15, task.getCustomNagMessage());
         ps.setInt(16, task.isTemplate() ? 1 : 0);
         ps.setString(17, task.getParentTemplateId());
-        ps.setString(18, task.getCreatedAt().toString());
-        ps.setString(19, task.getUpdatedAt().toString());
+        ps.setInt(18, task.getDurationMinutes());
+        ps.setInt(19, task.getTimerRemainingSeconds());
+        ps.setInt(20, task.isTimerActive() ? 1 : 0);
+        ps.setString(21, task.getCreatedAt().toString());
+        ps.setString(22, task.getUpdatedAt().toString());
     }
 
     private Task mapRowToTask(ResultSet rs) throws SQLException {
@@ -377,11 +385,23 @@ public class SqliteTaskRepository implements TaskRepository {
         boolean isTemplate = rs.getInt("is_template") == 1;
         String parentId = rs.getString("parent_template_id");
 
+        int durationMinutes = 0;
+        int timerRemainingSeconds = 0;
+        boolean timerActive = false;
+        try {
+            durationMinutes = rs.getInt("duration_minutes");
+            timerRemainingSeconds = rs.getInt("timer_remaining_seconds");
+            timerActive = rs.getInt("timer_active") == 1;
+        } catch (SQLException ignored) {
+            // Backward-compatibility if columns not present
+        }
+
         LocalDateTime createdAt = LocalDateTime.parse(rs.getString("created_at"));
         LocalDateTime updatedAt = LocalDateTime.parse(rs.getString("updated_at"));
 
         return new Task(id, title, description, category, priority, dueDateTime, rule,
                 status, completedAt, postponedUntil, nagCount, EscalationLevel.fromLevel(escLevel),
-                customMsg, isTemplate, parentId, createdAt, updatedAt);
+                customMsg, isTemplate, parentId, durationMinutes, timerRemainingSeconds, timerActive,
+                createdAt, updatedAt);
     }
 }

@@ -7,7 +7,7 @@
 
 param(
     [string]$PackageType = "app-image",   # "app-image", "msi", or "exe"
-    [string]$AppVersion = "1.0.0"
+    [string]$AppVersion = "1.1.0"
 )
 
 $ErrorActionPreference = "Stop"
@@ -20,9 +20,12 @@ try {
     Pop-Location
 }
 
-$JarFile = "$PSScriptRoot/../../app/target/DidYouDoIt-1.0-SNAPSHOT-all.jar"
-if (-not (Test-Path $JarFile)) {
-    Write-Error "Could not locate shaded JAR at $JarFile"
+$JarFile = (Get-ChildItem -Path "$PSScriptRoot/../../app/target" -Filter "DidYouDoIt-*-all.jar" | Select-Object -First 1).FullName
+if (-not $JarFile) {
+    $JarFile = (Get-ChildItem -Path "$PSScriptRoot/../../app/target" -Filter "DidYouDoIt-*.jar" | Select-Object -First 1).FullName
+}
+if (-not $JarFile -or -not (Test-Path $JarFile)) {
+    Write-Error "Could not locate packaged JAR in app/target"
 }
 
 Write-Host "==> 2. Preparing packaging staging & output directories..." -ForegroundColor Cyan

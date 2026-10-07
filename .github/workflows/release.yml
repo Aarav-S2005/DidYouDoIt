@@ -40,12 +40,9 @@ jobs:
 
       - name: Package Linux Artifacts
         run: |
-          JAR_PATH="app/target/DidYouDoIt-1.0.1-all.jar"
-          if [ ! -f "$JAR_PATH" ]; then
-            JAR_PATH=$(find app/target -name "DidYouDoIt-*-all.jar" -o -name "DidYouDoIt-*.jar" | head -n 1)
-          fi
+          JAR_PATH=$(find app/target -name "DidYouDoIt-*-all.jar" -o -name "DidYouDoIt-*.jar" | head -n 1)
           JAR_NAME=$(basename "$JAR_PATH")
-          TAG_NAME="${GITHUB_REF_NAME:-1.0.1}"
+          TAG_NAME="${GITHUB_REF_NAME:-1.1.0}"
           VERSION="${TAG_NAME#v}"
           mkdir -p packaging/linux/output
 
@@ -113,7 +110,7 @@ jobs:
             $JarPath = (Get-ChildItem -Path "app/target" -Filter "DidYouDoIt-*.jar" | Select-Object -First 1).FullName
           }
 
-          $TagName = if ($env:GITHUB_REF_NAME) { $env:GITHUB_REF_NAME } else { "1.0.1" }
+          $TagName = if ($env:GITHUB_REF_NAME) { $env:GITHUB_REF_NAME } else { "1.1.0" }
           $Version = $TagName.TrimStart("v")
 
           $OutDir = "packaging/windows/output"

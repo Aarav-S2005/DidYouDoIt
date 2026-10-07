@@ -371,6 +371,17 @@ public class DashboardView extends BorderPane {
                         });
                     }
                 }
+
+                @Override
+                public void onToggleTimer(Task t) {
+                    viewModel.saveTaskSilently(t);
+                }
+
+                @Override
+                public void onTimerFinished(Task t) {
+                    viewModel.saveTaskSilently(t);
+                    Platform.runLater(() -> showToast("🎉 Focus Time Complete!", "You reached your focus goal for: " + t.getTitle()));
+                }
             });
 
             taskCardsContainer.getChildren().add(card);

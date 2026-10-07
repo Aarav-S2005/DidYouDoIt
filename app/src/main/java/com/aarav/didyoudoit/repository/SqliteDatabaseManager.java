@@ -119,6 +119,9 @@ public class SqliteDatabaseManager implements DatabaseManager {
                 custom_nag_message TEXT,
                 is_template INTEGER NOT NULL DEFAULT 0,
                 parent_template_id TEXT,
+                duration_minutes INTEGER NOT NULL DEFAULT 0,
+                timer_remaining_seconds INTEGER NOT NULL DEFAULT 0,
+                timer_active INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             );
@@ -182,10 +185,24 @@ public class SqliteDatabaseManager implements DatabaseManager {
             stmt.execute(createTaskHistorySql);
             stmt.execute(createStreaksSql);
             stmt.execute(createSettingsSql);
+
+            // Backward-compatible schema migration for existing 1.0.x databases
+            migrateColumnSafely(stmt, "tasks", "duration_minutes", "INTEGER NOT NULL DEFAULT 0");
+            migrateColumnSafely(stmt, "tasks", "timer_remaining_seconds", "INTEGER NOT NULL DEFAULT 0");
+            migrateColumnSafely(stmt, "tasks", "timer_active", "INTEGER NOT NULL DEFAULT 0");
+
             LOGGER.info("SQLite schema initialized successfully.");
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Failed to initialize SQLite schema", e);
             throw new RuntimeException("Schema initialization failed", e);
+        }
+    }
+
+    private void migrateColumnSafely(Statement stmt, String table, String column, String definition) {
+        try {
+            stmt.execute("ALTER TABLE " + table + " ADD COLUMN " + column + " " + definition + ";");
+        } catch (SQLException ignored) {
+            // Column already exists
         }
     }
 

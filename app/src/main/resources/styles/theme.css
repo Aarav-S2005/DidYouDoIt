@@ -288,6 +288,56 @@
     -fx-text-fill: #E27D60;
 }
 
+.btn-timer {
+    -fx-background-color: #F0F7F4;
+    -fx-border-color: #85B79D;
+    -fx-border-width: 1px;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-padding: 4px 10px;
+    -fx-text-fill: #264653;
+    -fx-font-family: "Delius", sans-serif;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+}
+
+.btn-timer:hover {
+    -fx-background-color: #E2EFE9;
+    -fx-border-color: #2A9D8F;
+    -fx-text-fill: #1D3557;
+}
+
+.btn-timer-active {
+    -fx-background-color: #E27D60;
+    -fx-border-color: #D46B4E;
+    -fx-border-width: 1px;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-padding: 4px 10px;
+    -fx-text-fill: #FFFFFF;
+    -fx-font-family: "Delius", sans-serif;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(three-pass-box, rgba(226, 125, 96, 0.4), 6, 0, 0, 1);
+}
+
+.btn-timer-active:hover {
+    -fx-background-color: #D46B4E;
+}
+
+.badge-duration {
+    -fx-background-color: #EBF4F6;
+    -fx-text-fill: #1D3557;
+    -fx-border-color: #A8DADC;
+    -fx-border-radius: 999px;
+    -fx-border-width: 1px;
+}
+.badge-duration .label {
+    -fx-text-fill: #1D3557;
+}
+
 /* Check toggle button on task card */
 .check-toggle-btn {
     -fx-background-color: #FFFFFF;

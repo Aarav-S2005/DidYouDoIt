@@ -19,7 +19,7 @@ public class UpdateServiceImpl implements UpdateService {
 
     private static final Logger LOGGER = Logger.getLogger(UpdateServiceImpl.class.getName());
     private static final String DEFAULT_REPO = "Aarav-S2005/DidYouDoIt";
-    private static final String APP_VERSION = "1.0.1";
+    private static final String APP_VERSION = "1.1.0";
 
     private final String repository;
     private final HttpClient httpClient;

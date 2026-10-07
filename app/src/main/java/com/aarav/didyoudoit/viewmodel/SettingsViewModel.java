@@ -43,10 +43,10 @@ public class SettingsViewModel {
     private final com.aarav.didyoudoit.service.UpdateService updateService;
 
     // In-app update properties
-    private final StringProperty appVersion = new SimpleStringProperty("1.0.1");
+    private final StringProperty appVersion = new SimpleStringProperty("1.1.0");
     private final BooleanProperty checkingForUpdate = new SimpleBooleanProperty(false);
     private final BooleanProperty updateAvailable = new SimpleBooleanProperty(false);
-    private final StringProperty latestVersionString = new SimpleStringProperty("v1.0.1");
+    private final StringProperty latestVersionString = new SimpleStringProperty("v1.1.0");
     private final StringProperty updateDownloadUrl = new SimpleStringProperty("");
     private final StringProperty updateStatusMessage = new SimpleStringProperty("You are on the latest version.");
 

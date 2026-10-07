@@ -212,6 +212,17 @@ public class DashboardViewModel {
     }
 
     /**
+     * Updates a task asynchronously in the background without triggering a full list reload.
+     */
+    public CompletableFuture<Void> saveTaskSilently(Task task) {
+        if (task == null) return CompletableFuture.completedFuture(null);
+
+        return CompletableFuture.runAsync(() -> {
+            taskService.updateTask(task);
+        });
+    }
+
+    /**
      * Soft-deletes a task.
      */
     public CompletableFuture<Void> deleteTask(Task task) {

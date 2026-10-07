@@ -198,4 +198,39 @@ class SqliteTaskRepositoryTest {
 
         assertTrue(taskRepository.hasInstanceForTemplateOnDate(template.getId(), today));
     }
+
+    @Test
+    @DisplayName("Save and retrieve task with focus duration and timer state")
+    void testSaveAndRetrieveDurationAndTimer() {
+        Task task = Task.builder()
+                .title("Study DSA for 1 hour")
+                .category(TaskCategory.STUDY)
+                .priority(Priority.HIGH)
+                .dueDateTime(LocalDateTime.of(2026, 10, 7, 12, 0))
+                .durationMinutes(60)
+                .timerRemainingSeconds(3600)
+                .timerActive(true)
+                .build();
+
+        taskRepository.save(task);
+
+        Optional<Task> loaded = taskRepository.findById(task.getId());
+        assertTrue(loaded.isPresent());
+        Task retrieved = loaded.get();
+        assertEquals("Study DSA for 1 hour", retrieved.getTitle());
+        assertTrue(retrieved.hasDuration());
+        assertEquals(60, retrieved.getDurationMinutes());
+        assertEquals(3600, retrieved.getTimerRemainingSeconds());
+        assertTrue(retrieved.isTimerActive());
+
+        // Update timer
+        retrieved.setTimerRemainingSeconds(2400);
+        retrieved.setTimerActive(false);
+        taskRepository.save(retrieved);
+
+        Optional<Task> updated = taskRepository.findById(task.getId());
+        assertTrue(updated.isPresent());
+        assertEquals(2400, updated.get().getTimerRemainingSeconds());
+        assertFalse(updated.get().isTimerActive());
+    }
 }

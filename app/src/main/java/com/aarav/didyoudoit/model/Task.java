@@ -25,6 +25,9 @@ public class Task {
     private String customNagMessage;
     private boolean isTemplate;
     private String parentTemplateId;
+    private int durationMinutes;
+    private int timerRemainingSeconds;
+    private boolean timerActive;
     private final LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -43,6 +46,9 @@ public class Task {
                 String customNagMessage,
                 boolean isTemplate,
                 String parentTemplateId,
+                int durationMinutes,
+                int timerRemainingSeconds,
+                boolean timerActive,
                 LocalDateTime createdAt,
                 LocalDateTime updatedAt) {
         this.id = Objects.requireNonNullElseGet(id, () -> UUID.randomUUID().toString());
@@ -60,8 +66,33 @@ public class Task {
         this.customNagMessage = customNagMessage;
         this.isTemplate = isTemplate;
         this.parentTemplateId = parentTemplateId;
+        this.durationMinutes = Math.max(0, durationMinutes);
+        this.timerRemainingSeconds = timerRemainingSeconds > 0 ? timerRemainingSeconds : this.durationMinutes * 60;
+        this.timerActive = timerActive;
         this.createdAt = Objects.requireNonNullElseGet(createdAt, LocalDateTime::now);
         this.updatedAt = Objects.requireNonNullElseGet(updatedAt, LocalDateTime::now);
+    }
+
+    public Task(String id,
+                String title,
+                String description,
+                TaskCategory category,
+                Priority priority,
+                LocalDateTime dueDateTime,
+                RecurrenceRule recurrenceRule,
+                TaskStatus status,
+                LocalDateTime completedAt,
+                LocalDateTime postponedUntil,
+                int nagCount,
+                EscalationLevel escalationLevel,
+                String customNagMessage,
+                boolean isTemplate,
+                String parentTemplateId,
+                LocalDateTime createdAt,
+                LocalDateTime updatedAt) {
+        this(id, title, description, category, priority, dueDateTime, recurrenceRule, status,
+                completedAt, postponedUntil, nagCount, escalationLevel, customNagMessage,
+                isTemplate, parentTemplateId, 0, 0, false, createdAt, updatedAt);
     }
 
     public static Builder builder() {
@@ -228,6 +259,40 @@ public class Task {
         return postponedUntil != null ? postponedUntil : dueDateTime;
     }
 
+    public int getDurationMinutes() {
+        return durationMinutes;
+    }
+
+    public void setDurationMinutes(int durationMinutes) {
+        this.durationMinutes = Math.max(0, durationMinutes);
+        if (this.timerRemainingSeconds <= 0) {
+            this.timerRemainingSeconds = this.durationMinutes * 60;
+        }
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public int getTimerRemainingSeconds() {
+        return timerRemainingSeconds;
+    }
+
+    public void setTimerRemainingSeconds(int seconds) {
+        this.timerRemainingSeconds = Math.max(0, seconds);
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public boolean isTimerActive() {
+        return timerActive;
+    }
+
+    public void setTimerActive(boolean active) {
+        this.timerActive = active;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public boolean hasDuration() {
+        return durationMinutes > 0;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -258,6 +323,9 @@ public class Task {
         private String customNagMessage;
         private boolean isTemplate = false;
         private String parentTemplateId;
+        private int durationMinutes = 0;
+        private int timerRemainingSeconds = 0;
+        private boolean timerActive = false;
         private LocalDateTime createdAt = LocalDateTime.now();
         private LocalDateTime updatedAt = LocalDateTime.now();
 
@@ -276,13 +344,17 @@ public class Task {
         public Builder customNagMessage(String msg) { this.customNagMessage = msg; return this; }
         public Builder isTemplate(boolean isTemplate) { this.isTemplate = isTemplate; return this; }
         public Builder parentTemplateId(String parentId) { this.parentTemplateId = parentId; return this; }
+        public Builder durationMinutes(int mins) { this.durationMinutes = mins; return this; }
+        public Builder timerRemainingSeconds(int sec) { this.timerRemainingSeconds = sec; return this; }
+        public Builder timerActive(boolean active) { this.timerActive = active; return this; }
         public Builder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
         public Builder updatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; return this; }
 
         public Task build() {
             return new Task(id, title, description, category, priority, dueDateTime, recurrenceRule,
                     status, completedAt, postponedUntil, nagCount, escalationLevel,
-                    customNagMessage, isTemplate, parentTemplateId, createdAt, updatedAt);
+                    customNagMessage, isTemplate, parentTemplateId, durationMinutes,
+                    timerRemainingSeconds, timerActive, createdAt, updatedAt);
         }
     }
 }
