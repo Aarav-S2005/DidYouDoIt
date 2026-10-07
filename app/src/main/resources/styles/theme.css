@@ -363,6 +363,17 @@
     -fx-text-fill: #FFFFFF;
 }
 
+.check-toggle-locked {
+    -fx-border-color: #D6CEC5;
+    -fx-background-color: #F8F5F0;
+    -fx-opacity: 0.85;
+}
+
+.check-toggle-locked:hover {
+    -fx-border-color: #E27D60;
+    -fx-background-color: #FFF0EB;
+}
+
 /* --------------------------------------------------------------------------
    Badges and Chips
    -------------------------------------------------------------------------- */

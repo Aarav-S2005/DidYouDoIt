@@ -353,7 +353,16 @@ public class DashboardView extends BorderPane {
                 public void onToggleComplete(Task t) {
                     viewModel.toggleComplete(t).thenRun(() -> {
                         Platform.runLater(() -> showToast("✓ " + t.getTitle(), "Task marked as " + (t.getStatus() == com.aarav.didyoudoit.model.TaskStatus.COMPLETED ? "completed!" : "pending.")));
+                    }).exceptionally(ex -> {
+                        String msg = ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage();
+                        Platform.runLater(() -> showToast("⚠️ Cannot Complete", msg));
+                        return null;
                     });
+                }
+
+                @Override
+                public void onCompletionBlocked(Task t, String reason) {
+                    Platform.runLater(() -> showToast("⏳ Timer Incomplete", reason));
                 }
 
                 @Override

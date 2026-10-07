@@ -66,6 +66,10 @@ public class TaskServiceImpl implements TaskService {
     @Override
     public Task updateTask(Task task) {
         Objects.requireNonNull(task, "task cannot be null");
+        if (task.getStatus() == TaskStatus.COMPLETED && task.hasDuration() && task.getTimerRemainingSeconds() > 0) {
+            throw new IllegalStateException("Cannot complete task while focus timer has time remaining ("
+                    + task.getTimerRemainingSeconds() + "s left).");
+        }
         return taskRepository.save(task);
     }
 
@@ -82,9 +86,18 @@ public class TaskServiceImpl implements TaskService {
             return;
         }
 
+        // Do not allow task to be marked done if timer is not zero or timer is paused but not zero
+        if (task.hasDuration() && task.getTimerRemainingSeconds() > 0) {
+            LOGGER.warning("Cannot complete task '" + task.getTitle() + "': focus timer has "
+                    + task.getTimerRemainingSeconds() + "s remaining.");
+            throw new IllegalStateException("Cannot complete task while focus timer has time remaining ("
+                    + task.getTimerRemainingSeconds() + "s left).");
+        }
+
         LocalDateTime now = clockService.now();
         task.setStatus(TaskStatus.COMPLETED);
         task.setCompletedAt(now);
+        task.setTimerActive(false);
         taskRepository.save(task);
 
         // Record history snapshot

@@ -154,4 +154,65 @@ class TaskServiceImplTest {
         assertEquals(EscalationLevel.NUDGE, nagged2.getEscalationLevel());
         assertEquals(TaskStatus.OVERDUE, nagged2.getStatus());
     }
+
+    @Test
+    @DisplayName("Cannot complete task when timer is running and not zero")
+    void testCannotCompleteTaskWhenTimerActiveAndNotZero() {
+        Task task = taskService.createTask(Task.builder()
+                .title("Read Paper")
+                .durationMinutes(25)
+                .timerRemainingSeconds(1500)
+                .timerActive(true)
+                .build());
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> {
+            taskService.completeTask(task.getId());
+        });
+        assertTrue(ex.getMessage().contains("focus timer"));
+    }
+
+    @Test
+    @DisplayName("Cannot complete task when timer is paused and not zero")
+    void testCannotCompleteTaskWhenTimerPausedAndNotZero() {
+        Task task = taskService.createTask(Task.builder()
+                .title("Write Essay")
+                .durationMinutes(30)
+                .timerRemainingSeconds(900)
+                .timerActive(false)
+                .build());
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> {
+            taskService.completeTask(task.getId());
+        });
+        assertTrue(ex.getMessage().contains("focus timer"));
+    }
+
+    @Test
+    @DisplayName("Can complete task once timer reaches zero")
+    void testCanCompleteTaskWhenTimerIsZero() {
+        Task task = taskService.createTask(Task.builder()
+                .title("Math Exercises")
+                .durationMinutes(20)
+                .timerRemainingSeconds(0)
+                .timerActive(false)
+                .build());
+
+        taskService.completeTask(task.getId());
+        Task completed = taskService.getTask(task.getId()).orElseThrow();
+        assertEquals(TaskStatus.COMPLETED, completed.getStatus());
+        assertNotNull(completed.getCompletedAt());
+    }
+
+    @Test
+    @DisplayName("Can complete task normally when no focus duration configured")
+    void testCanCompleteTaskWithoutDuration() {
+        Task task = taskService.createTask(Task.builder()
+                .title("Quick Email")
+                .durationMinutes(0)
+                .build());
+
+        taskService.completeTask(task.getId());
+        Task completed = taskService.getTask(task.getId()).orElseThrow();
+        assertEquals(TaskStatus.COMPLETED, completed.getStatus());
+    }
 }

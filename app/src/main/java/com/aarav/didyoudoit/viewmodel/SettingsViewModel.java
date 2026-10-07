@@ -47,7 +47,7 @@ public class SettingsViewModel {
     private final StringProperty appVersion = new SimpleStringProperty(com.aarav.didyoudoit.util.AppVersion.get());
     private final BooleanProperty checkingForUpdate = new SimpleBooleanProperty(false);
     private final BooleanProperty updateAvailable = new SimpleBooleanProperty(false);
-    private final StringProperty latestVersionString = new SimpleStringProperty("v1.1.0");
+    private final StringProperty latestVersionString = new SimpleStringProperty("v1.1.3");
     private final StringProperty updateDownloadUrl = new SimpleStringProperty("");
     private final StringProperty updateMsiUrl = new SimpleStringProperty("");
     private final StringProperty updateZipUrl = new SimpleStringProperty("");

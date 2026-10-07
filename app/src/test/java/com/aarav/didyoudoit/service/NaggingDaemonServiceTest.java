@@ -254,4 +254,60 @@ class NaggingDaemonServiceTest {
         assertTrue(notificationService.dismissedTaskIds.contains(task.getId()));
         assertTrue(updatedCalled.get());
     }
+
+    @Test
+    @DisplayName("Do not nag when timer is on for that task")
+    void testTimerActiveSuppressesNagging() {
+        // Task due at 8:30 (current clock is 9:00 -> 30 mins overdue)
+        Task task = taskService.createTask(Task.builder()
+                .title("Focus Coding Session")
+                .dueDateTime(LocalDateTime.of(2026, 10, 6, 8, 30))
+                .priority(Priority.HIGH)
+                .category(TaskCategory.WORK)
+                .durationMinutes(25)
+                .timerRemainingSeconds(1500)
+                .timerActive(true)
+                .build());
+
+        // Daemon runs: timer is active, so nagging and due notifications must be suppressed
+        daemonService.checkAndNagNow();
+
+        assertTrue(notificationService.notifiedTasks.isEmpty(), "Nagging must be suppressed when timer is active");
+        Task refreshed = taskService.getTask(task.getId()).orElseThrow();
+        assertEquals(0, refreshed.getNagCount(), "Nag count must remain 0 while timer is running");
+
+        // When timer is stopped/paused (timerActive = false), nagging can proceed
+        refreshed.setTimerActive(false);
+        taskService.updateTask(refreshed);
+
+        daemonService.checkAndNagNow();
+        assertEquals(1, notificationService.notifiedTasks.size(), "Due notification dispatched once timer is no longer active");
+    }
+
+    @Test
+    @DisplayName("Do not allow task to be marked done via notification if timer has remaining time")
+    void testActionCallbackMarkDoneBlockedWhenTimerHasRemainingSeconds() {
+        Task task = taskService.createTask(Task.builder()
+                .title("Study Biology")
+                .dueDateTime(LocalDateTime.of(2026, 10, 6, 8, 0))
+                .durationMinutes(30)
+                .timerRemainingSeconds(1800)
+                .timerActive(false)
+                .build());
+
+        // Attempt mark done while paused with 30m remaining
+        daemonService.onMarkDone(task.getId());
+
+        Task notCompleted = taskService.getTask(task.getId()).orElseThrow();
+        assertNotEquals(TaskStatus.COMPLETED, notCompleted.getStatus(), "Task must not be marked done when timer is not zero");
+
+        // Now set timer remaining to zero
+        notCompleted.setTimerRemainingSeconds(0);
+        taskService.updateTask(notCompleted);
+
+        daemonService.onMarkDone(task.getId());
+
+        Task completed = taskService.getTask(task.getId()).orElseThrow();
+        assertEquals(TaskStatus.COMPLETED, completed.getStatus(), "Task can be marked done once timer reaches zero");
+    }
 }

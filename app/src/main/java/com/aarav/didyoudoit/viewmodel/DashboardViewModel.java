@@ -180,6 +180,11 @@ public class DashboardViewModel {
                 task.setCompletedAt(null);
                 taskService.updateTask(task);
             } else {
+                if (task.hasDuration() && task.getTimerRemainingSeconds() > 0) {
+                    int sec = task.getTimerRemainingSeconds();
+                    String timeStr = String.format("%02d:%02d", sec / 60, sec % 60);
+                    throw new IllegalStateException("Focus timer still has " + timeStr + " remaining. Complete the timer before marking done.");
+                }
                 taskService.completeTask(task.getId());
             }
         }).thenCompose(v -> reloadTasks());

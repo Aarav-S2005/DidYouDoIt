@@ -12,6 +12,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -39,6 +40,7 @@ public class TaskCardView extends HBox {
         void onDelete(Task task);
         default void onToggleTimer(Task task) {}
         default void onTimerFinished(Task task) {}
+        default void onCompletionBlocked(Task task, String reason) {}
     }
 
     private final Task task;
@@ -103,16 +105,35 @@ public class TaskCardView extends HBox {
         btn.getStyleClass().add("check-toggle-btn");
         if (isCompleted) {
             btn.getStyleClass().add("check-toggle-completed");
+        } else if (task.hasDuration() && task.getTimerRemainingSeconds() > 0) {
+            btn.getStyleClass().add("check-toggle-locked");
+            String status = task.isTimerActive() ? "running" : "paused";
+            btn.setTooltip(new Tooltip("Focus timer " + status + " (" + formatTimerSeconds(task.getTimerRemainingSeconds())
+                    + " remaining). Complete timer before marking done."));
         }
         btn.setMinSize(28, 28);
         btn.setMaxSize(28, 28);
         btn.setOnAction(e -> {
             boolean willBeCompleted = task.getStatus() != TaskStatus.COMPLETED;
             if (willBeCompleted) {
+                // Do not allow task to be marked done if timer is not zero or timer is paused but not zero
+                if (task.hasDuration() && task.getTimerRemainingSeconds() > 0) {
+                    playShakeAnimation(btn);
+                    if (listener != null) {
+                        String status = task.isTimerActive() ? "is running" : "is paused";
+                        listener.onCompletionBlocked(task, "Focus timer " + status + " ("
+                                + formatTimerSeconds(task.getTimerRemainingSeconds())
+                                + " remaining). Complete the timer before marking this task done.");
+                    }
+                    return;
+                }
+
                 btn.setText("✓");
                 if (!btn.getStyleClass().contains("check-toggle-completed")) {
                     btn.getStyleClass().add("check-toggle-completed");
                 }
+                btn.getStyleClass().remove("check-toggle-locked");
+                btn.setTooltip(null);
                 titleLabel.setStyle("-fx-strikethrough: true; -fx-opacity: 0.6;");
                 if (timerTimeline != null) {
                     timerTimeline.stop();
@@ -122,12 +143,27 @@ public class TaskCardView extends HBox {
                 btn.setText("");
                 btn.getStyleClass().remove("check-toggle-completed");
                 titleLabel.setStyle("");
+                if (task.hasDuration() && task.getTimerRemainingSeconds() > 0) {
+                    btn.getStyleClass().add("check-toggle-locked");
+                    btn.setTooltip(new Tooltip("Focus timer (" + formatTimerSeconds(task.getTimerRemainingSeconds())
+                            + " remaining). Complete timer before marking done."));
+                }
             }
             if (listener != null) {
                 listener.onToggleComplete(task);
             }
         });
         return btn;
+    }
+
+    private void playShakeAnimation(javafx.scene.Node node) {
+        TranslateTransition shake = new TranslateTransition(Duration.millis(50), node);
+        shake.setFromX(0);
+        shake.setByX(5);
+        shake.setCycleCount(4);
+        shake.setAutoReverse(true);
+        shake.setOnFinished(ev -> node.setTranslateX(0));
+        shake.play();
     }
 
     private FlowPane createBadgeRow() {
@@ -234,6 +270,13 @@ public class TaskCardView extends HBox {
                     timerTimeline.stop();
                 }
                 updateTimerButtonDisplay(btn);
+                if (checkButton != null && task.getStatus() != TaskStatus.COMPLETED && task.getTimerRemainingSeconds() > 0) {
+                    if (!checkButton.getStyleClass().contains("check-toggle-locked")) {
+                        checkButton.getStyleClass().add("check-toggle-locked");
+                    }
+                    checkButton.setTooltip(new Tooltip("Focus timer paused (" + formatTimerSeconds(task.getTimerRemainingSeconds())
+                            + " remaining). Complete timer before marking done."));
+                }
             } else {
                 if (task.getTimerRemainingSeconds() <= 0) {
                     task.setTimerRemainingSeconds(task.getDurationMinutes() * 60);
@@ -241,6 +284,13 @@ public class TaskCardView extends HBox {
                 task.setTimerActive(true);
                 startTimeline(btn);
                 updateTimerButtonDisplay(btn);
+                if (checkButton != null && task.getStatus() != TaskStatus.COMPLETED && task.getTimerRemainingSeconds() > 0) {
+                    if (!checkButton.getStyleClass().contains("check-toggle-locked")) {
+                        checkButton.getStyleClass().add("check-toggle-locked");
+                    }
+                    checkButton.setTooltip(new Tooltip("Focus timer running (" + formatTimerSeconds(task.getTimerRemainingSeconds())
+                            + " remaining). Complete timer before marking done."));
+                }
             }
 
             if (listener != null) {
@@ -268,12 +318,19 @@ public class TaskCardView extends HBox {
                     timerTimeline.stop();
                 }
                 updateTimerButtonDisplay(btn);
+                if (checkButton != null) {
+                    checkButton.getStyleClass().remove("check-toggle-locked");
+                    checkButton.setTooltip(new Tooltip("Focus goal reached! You can now mark this task done."));
+                }
                 if (listener != null) {
                     listener.onTimerFinished(task);
                 }
             } else {
                 task.setTimerRemainingSeconds(rem);
                 updateTimerButtonDisplay(btn);
+                if (rem % 10 == 0 && listener != null) {
+                    listener.onToggleTimer(task);
+                }
             }
         }));
         timerTimeline.setCycleCount(Timeline.INDEFINITE);

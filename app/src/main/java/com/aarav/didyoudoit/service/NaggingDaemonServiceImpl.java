@@ -163,6 +163,13 @@ public class NaggingDaemonServiceImpl implements NaggingDaemonService, Notificat
     }
 
     private void processTaskNag(Task task, AppSettings settings, LocalDateTime now) {
+        // Do not nag when timer is on for that task
+        if (task.isTimerActive()) {
+            LOGGER.fine("Suppressing nag: focus timer is actively running for '" + task.getTitle() + "'");
+            notificationService.dismissNotification(task.getId());
+            return;
+        }
+
         LocalDateTime effectiveDeadline = task.getPostponedUntil() != null
                 ? task.getPostponedUntil()
                 : task.getDueDateTime();
@@ -229,12 +236,27 @@ public class NaggingDaemonServiceImpl implements NaggingDaemonService, Notificat
     public void onMarkDone(String taskId) {
         if (taskId == null) return;
         LOGGER.info("Notification action Mark Done received for task: " + taskId);
-        taskService.completeTask(taskId);
-        notificationService.dismissNotification(taskId);
-        lastNaggedTimes.remove(taskId);
 
-        if (onTaskUpdatedListener != null) {
-            onTaskUpdatedListener.run();
+        var taskOpt = taskService.getTask(taskId);
+        if (taskOpt.isPresent()) {
+            Task task = taskOpt.get();
+            if (task.hasDuration() && task.getTimerRemainingSeconds() > 0) {
+                LOGGER.warning("Cannot mark task '" + task.getTitle() + "' as done: focus timer still has "
+                        + task.getTimerRemainingSeconds() + "s remaining.");
+                return;
+            }
+        }
+
+        try {
+            taskService.completeTask(taskId);
+            notificationService.dismissNotification(taskId);
+            lastNaggedTimes.remove(taskId);
+
+            if (onTaskUpdatedListener != null) {
+                onTaskUpdatedListener.run();
+            }
+        } catch (IllegalStateException e) {
+            LOGGER.warning("Could not complete task " + taskId + ": " + e.getMessage());
         }
     }
 

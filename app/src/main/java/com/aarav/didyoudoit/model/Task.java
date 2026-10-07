@@ -67,7 +67,7 @@ public class Task {
         this.isTemplate = isTemplate;
         this.parentTemplateId = parentTemplateId;
         this.durationMinutes = Math.max(0, durationMinutes);
-        this.timerRemainingSeconds = timerRemainingSeconds > 0 ? timerRemainingSeconds : this.durationMinutes * 60;
+        this.timerRemainingSeconds = timerRemainingSeconds >= 0 ? timerRemainingSeconds : this.durationMinutes * 60;
         this.timerActive = timerActive;
         this.createdAt = Objects.requireNonNullElseGet(createdAt, LocalDateTime::now);
         this.updatedAt = Objects.requireNonNullElseGet(updatedAt, LocalDateTime::now);
@@ -325,7 +325,7 @@ public class Task {
         private boolean isTemplate = false;
         private String parentTemplateId;
         private int durationMinutes = 0;
-        private int timerRemainingSeconds = 0;
+        private int timerRemainingSeconds = -1;
         private boolean timerActive = false;
         private LocalDateTime createdAt = LocalDateTime.now();
         private LocalDateTime updatedAt = LocalDateTime.now();
