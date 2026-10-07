@@ -2,6 +2,8 @@ package com.aarav.didyoudoit.view;
 
 import com.aarav.didyoudoit.model.Task;
 import com.aarav.didyoudoit.model.TaskCategory;
+import com.aarav.didyoudoit.service.AlarmSoundService;
+import com.aarav.didyoudoit.service.AlarmSoundServiceImpl;
 import com.aarav.didyoudoit.ui.components.*;
 import com.aarav.didyoudoit.ui.theme.FontManager;
 import com.aarav.didyoudoit.ui.theme.Theme;
@@ -38,6 +40,7 @@ public class DashboardView extends BorderPane {
     private final StatisticsView statisticsView;
     private final SettingsViewModel settingsViewModel;
     private final SettingsView settingsView;
+    private final AlarmSoundService alarmSoundService;
     private final StackPane toastContainer;
     private final VBox toastStack;
 
@@ -48,20 +51,29 @@ public class DashboardView extends BorderPane {
     private final ProgressIndicator loadingIndicator;
 
     public DashboardView(DashboardViewModel viewModel, StackPane toastContainer) {
-        this(viewModel, null, null, toastContainer);
+        this(viewModel, null, null, null, toastContainer);
     }
 
     public DashboardView(DashboardViewModel viewModel, StatisticsViewModel statisticsViewModel, StackPane toastContainer) {
-        this(viewModel, statisticsViewModel, null, toastContainer);
+        this(viewModel, statisticsViewModel, null, null, toastContainer);
     }
 
     public DashboardView(DashboardViewModel viewModel,
                          StatisticsViewModel statisticsViewModel,
                          SettingsViewModel settingsViewModel,
                          StackPane toastContainer) {
+        this(viewModel, statisticsViewModel, settingsViewModel, null, toastContainer);
+    }
+
+    public DashboardView(DashboardViewModel viewModel,
+                         StatisticsViewModel statisticsViewModel,
+                         SettingsViewModel settingsViewModel,
+                         AlarmSoundService alarmSoundService,
+                         StackPane toastContainer) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel cannot be null");
         this.statisticsViewModel = statisticsViewModel;
         this.settingsViewModel = settingsViewModel;
+        this.alarmSoundService = Objects.requireNonNullElseGet(alarmSoundService, AlarmSoundServiceImpl::new);
         this.toastContainer = Objects.requireNonNull(toastContainer, "toastContainer cannot be null");
         this.statisticsView = (statisticsViewModel != null) ? new StatisticsView(statisticsViewModel, this::showToast) : null;
         this.settingsView = (settingsViewModel != null) ? new SettingsView(settingsViewModel, this::showToast) : null;
@@ -379,8 +391,9 @@ public class DashboardView extends BorderPane {
 
                 @Override
                 public void onTimerFinished(Task t) {
+                    alarmSoundService.playTimerFinishedAlarm();
                     viewModel.saveTaskSilently(t);
-                    Platform.runLater(() -> showToast("🎉 Focus Time Complete!", "You reached your focus goal for: " + t.getTitle()));
+                    Platform.runLater(() -> showToast("🔔 Focus Time Complete!", "You reached your focus goal for: " + t.getTitle()));
                 }
             });
 

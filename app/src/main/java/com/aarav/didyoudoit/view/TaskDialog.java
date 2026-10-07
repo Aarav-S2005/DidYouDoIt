@@ -12,9 +12,11 @@ import com.aarav.didyoudoit.ui.theme.Theme;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
@@ -44,7 +46,9 @@ public class TaskDialog extends Stage {
     private final ComboBox<String> hourCombo;
     private final ComboBox<String> minuteCombo;
     private final ComboBox<String> amPmCombo;
-    private final ComboBox<String> durationCombo;
+    private final ComboBox<String> durationHoursCombo;
+    private final ComboBox<String> durationMinutesCombo;
+    private final Label durationSummaryLabel;
     private final ComboBox<RecurrenceType> recurrenceCombo;
     private final InputField customNagField;
 
@@ -60,8 +64,8 @@ public class TaskDialog extends Stage {
         VBox root = new VBox(Theme.SPACING_MD);
         root.getStyleClass().add("card-elevated");
         root.setPadding(new Insets(Theme.SPACING_LG));
-        root.setPrefWidth(520);
-        root.setMaxWidth(560);
+        root.setPrefWidth(540);
+        root.setMaxWidth(580);
 
         // Header Title
         Label headerTitle = new Label(taskToEdit == null ? "Create New Task" : "Edit Task");
@@ -69,13 +73,13 @@ public class TaskDialog extends Stage {
         headerTitle.getStyleClass().add("section-header");
 
         // 1. Title Input
-        this.titleField = new InputField("Task Title *", "e.g. Study DSA for 1 hour");
+        this.titleField = new InputField("Task Title *", "e.g. Study DSA, complete report, workout");
         if (taskToEdit != null) {
             this.titleField.setText(taskToEdit.getTitle());
         }
 
         // 2. Description Input
-        this.descriptionField = new InputField("Description (Optional)", "Additional notes, goals, or topics");
+        this.descriptionField = new InputField("Description (Optional)", "Additional notes, goals, or subtasks");
         if (taskToEdit != null) {
             this.descriptionField.setText(taskToEdit.getDescription());
         }
@@ -167,33 +171,84 @@ public class TaskDialog extends Stage {
 
         scheduleRow.getChildren().addAll(dateBox, timeBox);
 
-        // 5. Duration & Recurrence Row
+        // 5. Variable Focus Duration & Recurrence Row
         HBox durRecRow = new HBox(Theme.SPACING_MD);
-        durRecRow.setAlignment(Pos.CENTER_LEFT);
+        durRecRow.setAlignment(Pos.TOP_LEFT);
 
         VBox durBox = new VBox(Theme.SPACING_XS);
-        Label durLabel = new Label("Focus Duration (Timer)");
-        durLabel.setFont(FontManager.getPrimaryFont(12));
-        durLabel.getStyleClass().add("caption-text");
-
-        this.durationCombo = new ComboBox<>();
-        this.durationCombo.setEditable(true);
-        this.durationCombo.getItems().addAll(
-                "None",
-                "15 minutes",
-                "25 minutes (Pomodoro)",
-                "30 minutes",
-                "45 minutes",
-                "1 hour (60 min)",
-                "1.5 hours (90 min)",
-                "2 hours (120 min)",
-                "3 hours (180 min)"
-        );
-        this.durationCombo.setValue(formatInitialDuration(taskToEdit != null ? taskToEdit.getDurationMinutes() : 0));
-        this.durationCombo.getStyleClass().add("input-text");
-        this.durationCombo.setMaxWidth(Double.MAX_VALUE);
-        durBox.getChildren().addAll(durLabel, durationCombo);
+        durBox.setPadding(new Insets(10, 12, 10, 12));
+        durBox.setStyle("-fx-background-color: #FAF7F2; -fx-border-color: #E5DFD7; -fx-border-radius: 10px; -fx-background-radius: 10px;");
         HBox.setHgrow(durBox, javafx.scene.layout.Priority.ALWAYS);
+
+        Label durLabel = new Label("Focus Duration (Variable Hours & Mins)");
+        durLabel.setFont(FontManager.getPrimaryFont(12));
+        durLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: -fx-text-primary;");
+
+        HBox durInputRow = new HBox(4);
+        durInputRow.setAlignment(Pos.CENTER_LEFT);
+
+        this.durationHoursCombo = new ComboBox<>();
+        this.durationHoursCombo.setEditable(true);
+        for (int h = 0; h <= 12; h++) {
+            this.durationHoursCombo.getItems().add(String.valueOf(h));
+        }
+        this.durationHoursCombo.getStyleClass().add("input-text");
+        this.durationHoursCombo.setPrefWidth(62);
+
+        Label hrsLabel = new Label("h");
+        hrsLabel.setFont(FontManager.getPrimaryFont(12));
+
+        this.durationMinutesCombo = new ComboBox<>();
+        this.durationMinutesCombo.setEditable(true);
+        for (int m = 0; m < 60; m += 5) {
+            this.durationMinutesCombo.getItems().add(String.valueOf(m));
+        }
+        this.durationMinutesCombo.getStyleClass().add("input-text");
+        this.durationMinutesCombo.setPrefWidth(66);
+
+        Label minsLabel = new Label("m");
+        minsLabel.setFont(FontManager.getPrimaryFont(12));
+
+        int initMinutes = (taskToEdit != null) ? taskToEdit.getDurationMinutes() : 0;
+        this.durationHoursCombo.setValue(String.valueOf(initMinutes / 60));
+        this.durationMinutesCombo.setValue(String.valueOf(initMinutes % 60));
+
+        this.durationSummaryLabel = new Label();
+        this.durationSummaryLabel.setFont(FontManager.getAccentFont(12));
+
+        Runnable updateSummary = () -> {
+            int h = parsePositiveInt(durationHoursCombo.getValue());
+            int m = parsePositiveInt(durationMinutesCombo.getValue());
+            int total = h * 60 + m;
+            if (total <= 0) {
+                durationSummaryLabel.setText("No timer (Standard task)");
+                durationSummaryLabel.setStyle("-fx-text-fill: #8E8880;");
+            } else {
+                durationSummaryLabel.setText("⏱ Goal: " + formatDurationDetailed(total));
+                durationSummaryLabel.setStyle("-fx-text-fill: #E27D60; -fx-font-weight: bold;");
+            }
+        };
+
+        this.durationHoursCombo.valueProperty().addListener((obs, oldV, newV) -> updateSummary.run());
+        this.durationMinutesCombo.valueProperty().addListener((obs, oldV, newV) -> updateSummary.run());
+        updateSummary.run();
+
+        // Quick Preset Chips (None, 15m, 25m, 30m, 45m, 1h, 1.5h, 2h)
+        FlowPane presetChips = new FlowPane(4, 4);
+        presetChips.setAlignment(Pos.CENTER_LEFT);
+        presetChips.getChildren().addAll(
+                createPresetChip("None", 0, 0, updateSummary),
+                createPresetChip("15m", 0, 15, updateSummary),
+                createPresetChip("25m", 0, 25, updateSummary),
+                createPresetChip("30m", 0, 30, updateSummary),
+                createPresetChip("45m", 0, 45, updateSummary),
+                createPresetChip("1h", 1, 0, updateSummary),
+                createPresetChip("1.5h", 1, 30, updateSummary),
+                createPresetChip("2h", 2, 0, updateSummary)
+        );
+
+        durInputRow.getChildren().addAll(durationHoursCombo, hrsLabel, durationMinutesCombo, minsLabel);
+        durBox.getChildren().addAll(durLabel, durInputRow, presetChips, durationSummaryLabel);
 
         VBox recBox = new VBox(Theme.SPACING_XS);
         Label recLabel = new Label("Recurrence Pattern");
@@ -284,46 +339,35 @@ public class TaskDialog extends Stage {
         }
     }
 
-    private String formatInitialDuration(int minutes) {
-        if (minutes <= 0) return "None";
-        if (minutes == 15) return "15 minutes";
-        if (minutes == 25) return "25 minutes (Pomodoro)";
-        if (minutes == 30) return "30 minutes";
-        if (minutes == 45) return "45 minutes";
-        if (minutes == 60) return "1 hour (60 min)";
-        if (minutes == 90) return "1.5 hours (90 min)";
-        if (minutes == 120) return "2 hours (120 min)";
-        if (minutes == 180) return "3 hours (180 min)";
-        return minutes + " minutes";
+    private Button createPresetChip(String label, int hours, int minutes, Runnable onSelect) {
+        Button chip = new Button(label);
+        chip.getStyleClass().add("btn-card-action");
+        chip.setStyle("-fx-font-size: 11px; -fx-padding: 2 6 2 6;");
+        chip.setOnAction(e -> {
+            durationHoursCombo.setValue(String.valueOf(hours));
+            durationMinutesCombo.setValue(String.valueOf(minutes));
+            if (onSelect != null) onSelect.run();
+        });
+        return chip;
     }
 
-    private int parseDurationMinutes(String str) {
-        if (str == null || str.isBlank() || str.equalsIgnoreCase("None")) {
+    private int parsePositiveInt(String str) {
+        if (str == null || str.isBlank()) return 0;
+        try {
+            String digits = str.replaceAll("[^0-9]", "");
+            return digits.isEmpty() ? 0 : Integer.parseInt(digits);
+        } catch (Exception e) {
             return 0;
         }
-        String clean = str.trim().toLowerCase();
-        if (clean.contains("1.5 hour") || clean.contains("90 min")) return 90;
-        if (clean.contains("2.5 hour") || clean.contains("150 min")) return 150;
-        if (clean.contains("1 hour") || clean.contains("60 min")) return 60;
-        if (clean.contains("2 hour") || clean.contains("120 min")) return 120;
-        if (clean.contains("3 hour") || clean.contains("180 min")) return 180;
-        if (clean.contains("15 min")) return 15;
-        if (clean.contains("25 min")) return 25;
-        if (clean.contains("30 min")) return 30;
-        if (clean.contains("45 min")) return 45;
+    }
 
-        try {
-            if (clean.endsWith("h") || clean.endsWith("hr") || clean.endsWith("hours") || clean.endsWith("hour")) {
-                String num = clean.replaceAll("[^0-9.]", "");
-                double h = Double.parseDouble(num);
-                return (int) Math.round(h * 60);
-            }
-            String num = clean.replaceAll("[^0-9]", "");
-            if (!num.isBlank()) {
-                return Integer.parseInt(num);
-            }
-        } catch (Exception ignored) {}
-        return 0;
+    private String formatDurationDetailed(int totalMinutes) {
+        if (totalMinutes <= 0) return "No timer";
+        int h = totalMinutes / 60;
+        int m = totalMinutes % 60;
+        if (h > 0 && m > 0) return h + "h " + m + "m (" + totalMinutes + "m total)";
+        if (h > 0) return h + "h (" + totalMinutes + "m total)";
+        return m + "m";
     }
 
     private void handleSave() {
@@ -340,7 +384,10 @@ public class TaskDialog extends Stage {
         RecurrenceType recType = recurrenceCombo.getValue();
         RecurrenceRule recRule = new RecurrenceRule(recType, time, null);
 
-        int durationMins = parseDurationMinutes(durationCombo.getValue());
+        int h = parsePositiveInt(durationHoursCombo.getValue());
+        int m = parsePositiveInt(durationMinutesCombo.getValue());
+        int durationMins = h * 60 + m;
+
         int remainingSecs = durationMins * 60;
         boolean timerActive = false;
         if (originalTask != null && originalTask.getDurationMinutes() == durationMins) {

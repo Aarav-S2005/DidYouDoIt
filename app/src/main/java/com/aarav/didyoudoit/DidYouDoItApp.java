@@ -83,9 +83,10 @@ public class DidYouDoItApp extends Application {
         StatisticsViewModel statisticsViewModel = new StatisticsViewModel(taskService, streakService, historyRepository, clockService);
         SettingsViewModel settingsViewModel = new SettingsViewModel(settingsService, messageService, backupService, startupService);
 
-        // 4. UI Assembly
+        // 4. UI Assembly & Audio Feedback
+        AlarmSoundService alarmSoundService = new AlarmSoundServiceImpl();
         StackPane rootOverlay = new StackPane();
-        DashboardView dashboardView = new DashboardView(dashboardViewModel, statisticsViewModel, settingsViewModel, rootOverlay);
+        DashboardView dashboardView = new DashboardView(dashboardViewModel, statisticsViewModel, settingsViewModel, alarmSoundService, rootOverlay);
         rootOverlay.getChildren().add(dashboardView);
 
         // 5. Notifications & Nagging Daemon Engine (FR-04, FR-05, FR-06, FR-07, FR-08)

@@ -153,10 +153,8 @@ public class TaskCardView extends HBox {
 
         // Focus duration badge if configured
         if (task.hasDuration()) {
-            String durText = task.getDurationMinutes() >= 60
-                    ? String.format("%.1fh focus", task.getDurationMinutes() / 60.0).replace(".0h", "h")
-                    : task.getDurationMinutes() + "m focus";
-            Label durBadge = new Label("⏱ " + durText);
+            String durText = formatDurationDisplay(task.getDurationMinutes());
+            Label durBadge = new Label("⏱ " + durText + " focus");
             durBadge.setFont(FontManager.getPrimaryFont(11));
             durBadge.setTextFill(javafx.scene.paint.Color.web("#1D3557"));
             durBadge.setStyle("-fx-font-weight: bold; -fx-text-fill: #1D3557;");
@@ -285,23 +283,42 @@ public class TaskCardView extends HBox {
     private void updateTimerButtonDisplay(Button btn) {
         btn.getStyleClass().removeAll("btn-timer", "btn-timer-active");
         int rem = task.getTimerRemainingSeconds();
-        int mins = rem / 60;
-        int secs = rem % 60;
-        String formatted = String.format("%02d:%02d", mins, secs);
+        String formatted = formatTimerSeconds(rem);
+        String compactDur = formatDurationDisplay(task.getDurationMinutes());
 
         if (task.isTimerActive()) {
             btn.setText("⏸ " + formatted);
             btn.getStyleClass().add("btn-timer-active");
         } else {
             if (rem <= 0) {
-                btn.setText("🔄 Restart (" + task.getDurationMinutes() + "m)");
+                btn.setText("🔄 Restart (" + compactDur + ")");
             } else if (rem == task.getDurationMinutes() * 60) {
-                btn.setText("▶ Start (" + task.getDurationMinutes() + "m)");
+                btn.setText("▶ Start (" + compactDur + ")");
             } else {
                 btn.setText("▶ Resume (" + formatted + ")");
             }
             btn.getStyleClass().add("btn-timer");
         }
+    }
+
+    public static String formatDurationDisplay(int minutes) {
+        if (minutes <= 0) return "0m";
+        int h = minutes / 60;
+        int m = minutes % 60;
+        if (h > 0 && m > 0) return h + "h " + m + "m";
+        if (h > 0) return h + "h";
+        return m + "m";
+    }
+
+    public static String formatTimerSeconds(int totalSeconds) {
+        if (totalSeconds <= 0) return "00:00";
+        int h = totalSeconds / 3600;
+        int m = (totalSeconds % 3600) / 60;
+        int s = totalSeconds % 60;
+        if (h > 0) {
+            return String.format("%d:%02d:%02d", h, m, s);
+        }
+        return String.format("%02d:%02d", m, s);
     }
 
     private Button createTextActionButton(String text, javafx.event.EventHandler<javafx.event.ActionEvent> handler) {
