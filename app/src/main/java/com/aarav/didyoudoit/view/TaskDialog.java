@@ -18,6 +18,7 @@ import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -64,8 +65,9 @@ public class TaskDialog extends Stage {
         VBox root = new VBox(Theme.SPACING_MD);
         root.getStyleClass().add("card-elevated");
         root.setPadding(new Insets(Theme.SPACING_LG));
-        root.setPrefWidth(540);
-        root.setMaxWidth(580);
+        root.setPrefWidth(660);
+        root.setMinWidth(640);
+        root.setMaxWidth(700);
 
         // Header Title
         Label headerTitle = new Label(taskToEdit == null ? "Create New Task" : "Edit Task");
@@ -84,7 +86,7 @@ public class TaskDialog extends Stage {
             this.descriptionField.setText(taskToEdit.getDescription());
         }
 
-        // 3. Category & Priority Row
+        // 3. Category, Priority & Recurrence Row (3 equal columns)
         HBox metaRow = new HBox(Theme.SPACING_MD);
         metaRow.setAlignment(Pos.CENTER_LEFT);
 
@@ -112,7 +114,32 @@ public class TaskDialog extends Stage {
         prioBox.getChildren().addAll(prioLabel, priorityCombo);
         HBox.setHgrow(prioBox, javafx.scene.layout.Priority.ALWAYS);
 
-        metaRow.getChildren().addAll(catBox, prioBox);
+        VBox recBox = new VBox(Theme.SPACING_XS);
+        Label recLabel = new Label("Recurrence Pattern");
+        recLabel.setFont(FontManager.getPrimaryFont(12));
+        recLabel.getStyleClass().add("caption-text");
+        this.recurrenceCombo = new ComboBox<>();
+        this.recurrenceCombo.getItems().addAll(RecurrenceType.values());
+        this.recurrenceCombo.setConverter(new javafx.util.StringConverter<>() {
+            @Override
+            public String toString(RecurrenceType type) {
+                return type != null ? type.getDisplayName() : "";
+            }
+            @Override
+            public RecurrenceType fromString(String string) {
+                return null;
+            }
+        });
+        RecurrenceType initialRecType = (taskToEdit != null && taskToEdit.getRecurrenceRule() != null)
+                ? taskToEdit.getRecurrenceRule().getType()
+                : RecurrenceType.NONE;
+        this.recurrenceCombo.setValue(initialRecType);
+        this.recurrenceCombo.getStyleClass().add("input-text");
+        this.recurrenceCombo.setMaxWidth(Double.MAX_VALUE);
+        recBox.getChildren().addAll(recLabel, recurrenceCombo);
+        HBox.setHgrow(recBox, javafx.scene.layout.Priority.ALWAYS);
+
+        metaRow.getChildren().addAll(catBox, prioBox, recBox);
 
         // 4. Due Date & Granular Time Row
         HBox scheduleRow = new HBox(Theme.SPACING_MD);
@@ -137,31 +164,34 @@ public class TaskDialog extends Stage {
         timeLabel.setFont(FontManager.getPrimaryFont(12));
         timeLabel.getStyleClass().add("caption-text");
 
-        HBox timePickers = new HBox(Theme.SPACING_XS);
+        HBox timePickers = new HBox(6);
         timePickers.setAlignment(Pos.CENTER_LEFT);
 
         this.hourCombo = new ComboBox<>();
         for (int h = 1; h <= 12; h++) {
             this.hourCombo.getItems().add(String.format("%02d", h));
         }
-        this.hourCombo.getStyleClass().add("input-text");
-        this.hourCombo.setPrefWidth(68);
+        this.hourCombo.getStyleClass().add("combo-box-compact");
+        this.hourCombo.setPrefWidth(78);
+        this.hourCombo.setMinWidth(72);
 
         Label colonLabel = new Label(":");
-        colonLabel.setStyle("-fx-font-weight: bold; -fx-padding: 0 1 0 1; -fx-text-fill: -fx-text-primary;");
+        colonLabel.setStyle("-fx-font-weight: bold; -fx-padding: 0 2 0 2; -fx-text-fill: -fx-text-primary;");
 
         this.minuteCombo = new ComboBox<>();
         this.minuteCombo.setEditable(true);
         for (int m = 0; m < 60; m += 5) {
             this.minuteCombo.getItems().add(String.format("%02d", m));
         }
-        this.minuteCombo.getStyleClass().add("input-text");
-        this.minuteCombo.setPrefWidth(72);
+        this.minuteCombo.getStyleClass().add("combo-box-compact");
+        this.minuteCombo.setPrefWidth(82);
+        this.minuteCombo.setMinWidth(76);
 
         this.amPmCombo = new ComboBox<>();
         this.amPmCombo.getItems().addAll("AM", "PM");
-        this.amPmCombo.getStyleClass().add("input-text");
-        this.amPmCombo.setPrefWidth(68);
+        this.amPmCombo.getStyleClass().add("combo-box-compact");
+        this.amPmCombo.setPrefWidth(80);
+        this.amPmCombo.setMinWidth(74);
 
         timePickers.getChildren().addAll(hourCombo, colonLabel, minuteCombo, amPmCombo);
         setInitialTime(taskToEdit);
@@ -171,20 +201,27 @@ public class TaskDialog extends Stage {
 
         scheduleRow.getChildren().addAll(dateBox, timeBox);
 
-        // 5. Variable Focus Duration & Recurrence Row
-        HBox durRecRow = new HBox(Theme.SPACING_MD);
-        durRecRow.setAlignment(Pos.TOP_LEFT);
+        // 5. Variable Focus Duration (Full Width Card)
+        VBox durBox = new VBox(Theme.SPACING_SM);
+        durBox.setPadding(new Insets(12, 16, 12, 16));
+        durBox.setStyle("-fx-background-color: #FAF7F2; -fx-border-color: #E5DFD7; -fx-border-radius: 12px; -fx-background-radius: 12px;");
 
-        VBox durBox = new VBox(Theme.SPACING_XS);
-        durBox.setPadding(new Insets(10, 12, 10, 12));
-        durBox.setStyle("-fx-background-color: #FAF7F2; -fx-border-color: #E5DFD7; -fx-border-radius: 10px; -fx-background-radius: 10px;");
-        HBox.setHgrow(durBox, javafx.scene.layout.Priority.ALWAYS);
+        HBox durHeaderRow = new HBox(Theme.SPACING_MD);
+        durHeaderRow.setAlignment(Pos.CENTER_LEFT);
 
         Label durLabel = new Label("Focus Duration (Variable Hours & Mins)");
-        durLabel.setFont(FontManager.getPrimaryFont(12));
+        durLabel.setFont(FontManager.getPrimaryFont(12.5));
         durLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: -fx-text-primary;");
 
-        HBox durInputRow = new HBox(4);
+        Region durSpacer = new Region();
+        HBox.setHgrow(durSpacer, javafx.scene.layout.Priority.ALWAYS);
+
+        this.durationSummaryLabel = new Label();
+        this.durationSummaryLabel.setFont(FontManager.getAccentFont(12.5));
+
+        durHeaderRow.getChildren().addAll(durLabel, durSpacer, durationSummaryLabel);
+
+        HBox durInputRow = new HBox(8);
         durInputRow.setAlignment(Pos.CENTER_LEFT);
 
         this.durationHoursCombo = new ComboBox<>();
@@ -192,10 +229,11 @@ public class TaskDialog extends Stage {
         for (int h = 0; h <= 12; h++) {
             this.durationHoursCombo.getItems().add(String.valueOf(h));
         }
-        this.durationHoursCombo.getStyleClass().add("input-text");
-        this.durationHoursCombo.setPrefWidth(62);
+        this.durationHoursCombo.getStyleClass().add("combo-box-compact");
+        this.durationHoursCombo.setPrefWidth(76);
+        this.durationHoursCombo.setMinWidth(70);
 
-        Label hrsLabel = new Label("h");
+        Label hrsLabel = new Label("hrs");
         hrsLabel.setFont(FontManager.getPrimaryFont(12));
 
         this.durationMinutesCombo = new ComboBox<>();
@@ -203,18 +241,16 @@ public class TaskDialog extends Stage {
         for (int m = 0; m < 60; m += 5) {
             this.durationMinutesCombo.getItems().add(String.valueOf(m));
         }
-        this.durationMinutesCombo.getStyleClass().add("input-text");
-        this.durationMinutesCombo.setPrefWidth(66);
+        this.durationMinutesCombo.getStyleClass().add("combo-box-compact");
+        this.durationMinutesCombo.setPrefWidth(80);
+        this.durationMinutesCombo.setMinWidth(74);
 
-        Label minsLabel = new Label("m");
+        Label minsLabel = new Label("mins");
         minsLabel.setFont(FontManager.getPrimaryFont(12));
 
         int initMinutes = (taskToEdit != null) ? taskToEdit.getDurationMinutes() : 0;
         this.durationHoursCombo.setValue(String.valueOf(initMinutes / 60));
         this.durationMinutesCombo.setValue(String.valueOf(initMinutes % 60));
-
-        this.durationSummaryLabel = new Label();
-        this.durationSummaryLabel.setFont(FontManager.getAccentFont(12));
 
         Runnable updateSummary = () -> {
             int h = parsePositiveInt(durationHoursCombo.getValue());
@@ -233,8 +269,10 @@ public class TaskDialog extends Stage {
         this.durationMinutesCombo.valueProperty().addListener((obs, oldV, newV) -> updateSummary.run());
         updateSummary.run();
 
-        // Quick Preset Chips (None, 15m, 25m, 30m, 45m, 1h, 1.5h, 2h)
-        FlowPane presetChips = new FlowPane(4, 4);
+        durInputRow.getChildren().addAll(durationHoursCombo, hrsLabel, durationMinutesCombo, minsLabel);
+
+        // Quick Preset Chips
+        FlowPane presetChips = new FlowPane(6, 6);
         presetChips.setAlignment(Pos.CENTER_LEFT);
         presetChips.getChildren().addAll(
                 createPresetChip("None", 0, 0, updateSummary),
@@ -247,25 +285,7 @@ public class TaskDialog extends Stage {
                 createPresetChip("2h", 2, 0, updateSummary)
         );
 
-        durInputRow.getChildren().addAll(durationHoursCombo, hrsLabel, durationMinutesCombo, minsLabel);
-        durBox.getChildren().addAll(durLabel, durInputRow, presetChips, durationSummaryLabel);
-
-        VBox recBox = new VBox(Theme.SPACING_XS);
-        Label recLabel = new Label("Recurrence Pattern");
-        recLabel.setFont(FontManager.getPrimaryFont(12));
-        recLabel.getStyleClass().add("caption-text");
-        this.recurrenceCombo = new ComboBox<>();
-        this.recurrenceCombo.getItems().addAll(RecurrenceType.values());
-        RecurrenceType initialRecType = (taskToEdit != null && taskToEdit.getRecurrenceRule() != null)
-                ? taskToEdit.getRecurrenceRule().getType()
-                : RecurrenceType.NONE;
-        this.recurrenceCombo.setValue(initialRecType);
-        this.recurrenceCombo.getStyleClass().add("input-text");
-        this.recurrenceCombo.setMaxWidth(Double.MAX_VALUE);
-        recBox.getChildren().addAll(recLabel, recurrenceCombo);
-        HBox.setHgrow(recBox, javafx.scene.layout.Priority.ALWAYS);
-
-        durRecRow.getChildren().addAll(durBox, recBox);
+        durBox.getChildren().addAll(durHeaderRow, durInputRow, presetChips);
 
         // 6. Custom Nag Message
         this.customNagField = new InputField(
@@ -294,7 +314,7 @@ public class TaskDialog extends Stage {
                 descriptionField,
                 metaRow,
                 scheduleRow,
-                durRecRow,
+                durBox,
                 customNagField,
                 buttonsRow
         );

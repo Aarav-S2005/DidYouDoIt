@@ -545,6 +545,29 @@
     -fx-text-fill: #2B2D42;
 }
 
+.combo-box-compact {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #E5DFD7;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-border-width: 1.5px;
+    -fx-padding: 3px 6px;
+    -fx-font-family: "Delius", sans-serif;
+    -fx-font-size: 13px;
+    -fx-text-fill: #2B2D42;
+    -fx-alignment: CENTER;
+}
+
+.combo-box-compact:hover {
+    -fx-border-color: #D46B4E;
+}
+
+.combo-box-compact .list-cell {
+    -fx-text-fill: #2B2D42;
+    -fx-alignment: CENTER;
+    -fx-padding: 2px 4px;
+}
+
 /* --------------------------------------------------------------------------
    Empty State Container
    -------------------------------------------------------------------------- */

@@ -8,7 +8,8 @@ import {
   Sliders,
   CheckCircle2,
   RefreshCw,
-  Monitor
+  Monitor,
+  Timer
 } from 'lucide-react';
 
 interface ReleaseAsset {
@@ -95,7 +96,7 @@ function GitHubIcon({ size = 16 }: { size?: number }) {
 export function App() {
   const [selectedTone, setSelectedTone] = useState<Personality>('sarcastic');
   const [quoteIndex, setQuoteIndex] = useState(0);
-  const [releaseVersion, setReleaseVersion] = useState<string>('v1.1.1');
+  const [releaseVersion, setReleaseVersion] = useState<string>('v1.1.2');
   const [assets, setAssets] = useState<Record<string, string>>({});
   const [isFetched, setIsFetched] = useState<boolean>(false);
 
@@ -289,6 +290,16 @@ export function App() {
               <h3 className="feature-title">4 Personality Styles</h3>
               <p className="feature-desc">
                 Choose how your app communicates: Gentle mindfulness, Strict military discipline, Sarcastic reality checks, or Aggressive pressure.
+              </p>
+            </div>
+
+            <div className="feature-box">
+              <div className="feature-icon-wrapper">
+                <Timer size={20} />
+              </div>
+              <h3 className="feature-title">Variable Focus Timers</h3>
+              <p className="feature-desc">
+                Set custom study or work durations (15m, 1h, custom hours & mins) with live progress tracking and alarm chimes upon completion.
               </p>
             </div>
 
