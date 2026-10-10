@@ -70,6 +70,14 @@ public class TaskServiceImpl implements TaskService {
             throw new IllegalStateException("Cannot complete task while focus timer has time remaining ("
                     + task.getTimerRemainingSeconds() + "s left).");
         }
+
+        // Prevent accidental resurrection if task was deleted in database
+        Optional<Task> existing = taskRepository.findById(task.getId());
+        if (existing.isPresent() && existing.get().getStatus() == TaskStatus.DELETED && task.getStatus() != TaskStatus.DELETED) {
+            LOGGER.warning("Ignoring updateTask for already deleted task: " + task.getId());
+            return existing.get();
+        }
+
         return taskRepository.save(task);
     }
 
@@ -129,17 +137,74 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public void deleteTask(String taskId) {
+        if (taskId == null) return;
+        Optional<Task> opt = taskRepository.findById(taskId);
+        if (opt.isEmpty()) {
+            return;
+        }
+
+        Task task = opt.get();
+        if (task.isTemplate()) {
+            taskRepository.delete(taskId);
+            taskRepository.deleteByParentTemplateId(taskId);
+            LOGGER.info("Deleted recurring template and its instances: " + taskId);
+            return;
+        }
+
+        if (task.getParentTemplateId() != null) {
+            taskRepository.delete(taskId);
+            taskRepository.delete(task.getParentTemplateId());
+            taskRepository.deleteByParentTemplateId(task.getParentTemplateId());
+            LOGGER.info("Deleted recurring task instance and parent template: " + task.getParentTemplateId());
+            return;
+        }
+
         taskRepository.delete(taskId);
+        LOGGER.info("Deleted task: " + taskId);
     }
 
     @Override
     public void restoreTask(String taskId) {
+        if (taskId == null) return;
+        Optional<Task> opt = taskRepository.findById(taskId);
+        if (opt.isEmpty()) {
+            return;
+        }
+
+        Task task = opt.get();
         taskRepository.restore(taskId);
+        if (task.getParentTemplateId() != null) {
+            taskRepository.restore(task.getParentTemplateId());
+        }
+        LOGGER.info("Restored task: " + taskId);
     }
 
     @Override
     public void hardDeleteTask(String taskId) {
+        if (taskId == null) return;
+        Optional<Task> opt = taskRepository.findById(taskId);
+        if (opt.isEmpty()) {
+            return;
+        }
+
+        Task task = opt.get();
+        if (task.isTemplate()) {
+            taskRepository.hardDelete(taskId);
+            taskRepository.hardDeleteByParentTemplateId(taskId);
+            LOGGER.info("Hard deleted recurring template and its instances: " + taskId);
+            return;
+        }
+
+        if (task.getParentTemplateId() != null) {
+            taskRepository.hardDelete(taskId);
+            taskRepository.hardDelete(task.getParentTemplateId());
+            taskRepository.hardDeleteByParentTemplateId(task.getParentTemplateId());
+            LOGGER.info("Hard deleted recurring task instance and parent template: " + task.getParentTemplateId());
+            return;
+        }
+
         taskRepository.hardDelete(taskId);
+        LOGGER.info("Hard deleted task: " + taskId);
     }
 
     @Override

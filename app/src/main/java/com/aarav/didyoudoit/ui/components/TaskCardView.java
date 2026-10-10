@@ -251,6 +251,7 @@ public class TaskCardView extends HBox {
         });
 
         Button deleteBtn = createTextActionButton("Delete", e -> {
+            dispose();
             if (listener != null) listener.onDelete(task);
         });
 
@@ -411,6 +412,13 @@ public class TaskCardView extends HBox {
             setEffect(Theme.SHADOW_SOFT);
             moveDown.playFromStart();
         });
+    }
+
+    public void dispose() {
+        if (timerTimeline != null) {
+            timerTimeline.stop();
+            timerTimeline = null;
+        }
     }
 
     public Task getTask() {

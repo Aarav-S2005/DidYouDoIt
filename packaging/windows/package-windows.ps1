@@ -7,7 +7,7 @@
 
 param(
     [string]$PackageType = "app-image",   # "app-image", "msi", or "exe"
-    [string]$AppVersion = "1.1.3"
+    [string]$AppVersion = "1.1.4"
 )
 
 $ErrorActionPreference = "Stop"

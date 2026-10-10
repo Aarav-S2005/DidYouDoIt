@@ -330,6 +330,11 @@ public class DashboardView extends BorderPane {
     }
 
     private void renderTaskCards() {
+        for (javafx.scene.Node node : taskCardsContainer.getChildren()) {
+            if (node instanceof TaskCardView card) {
+                card.dispose();
+            }
+        }
         taskCardsContainer.getChildren().clear();
 
         var tasks = viewModel.getDisplayedTasks();
@@ -387,6 +392,7 @@ public class DashboardView extends BorderPane {
                             true
                     );
                     if (confirmed) {
+                        t.setStatus(com.aarav.didyoudoit.model.TaskStatus.DELETED);
                         viewModel.deleteTask(t).thenRun(() -> {
                             Platform.runLater(() -> showToast("🗑 Deleted", "'" + t.getTitle() + "' moved to trash."));
                         });

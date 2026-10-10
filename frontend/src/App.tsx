@@ -96,7 +96,7 @@ function GitHubIcon({ size = 16 }: { size?: number }) {
 export function App() {
   const [selectedTone, setSelectedTone] = useState<Personality>('sarcastic');
   const [quoteIndex, setQuoteIndex] = useState(0);
-  const [releaseVersion, setReleaseVersion] = useState<string>('v1.1.3');
+  const [releaseVersion, setReleaseVersion] = useState<string>('v1.1.4');
   const [assets, setAssets] = useState<Record<string, string>>({});
   const [isFetched, setIsFetched] = useState<boolean>(false);
 

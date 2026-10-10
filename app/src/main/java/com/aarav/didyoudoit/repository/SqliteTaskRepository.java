@@ -196,8 +196,7 @@ public class SqliteTaskRepository implements TaskRepository {
         String sql = """
             SELECT COUNT(1) FROM tasks
             WHERE parent_template_id = ?
-              AND due_date_time >= ? AND due_date_time < ?
-              AND status != 'DELETED';
+              AND due_date_time >= ? AND due_date_time < ?;
         """;
 
         try (Connection conn = databaseManager.getConnection();
@@ -295,6 +294,20 @@ public class SqliteTaskRepository implements TaskRepository {
     }
 
     @Override
+    public void deleteByParentTemplateId(String parentTemplateId) {
+        if (parentTemplateId == null) return;
+        String sql = "UPDATE tasks SET status = 'DELETED', updated_at = ? WHERE parent_template_id = ?;";
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, LocalDateTime.now().toString());
+            ps.setString(2, parentTemplateId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Soft delete by parent template failed for: " + parentTemplateId, e);
+        }
+    }
+
+    @Override
     public void hardDelete(String id) {
         if (id == null) return;
         String sql = "DELETE FROM tasks WHERE id = ?;";
@@ -304,6 +317,19 @@ public class SqliteTaskRepository implements TaskRepository {
             ps.executeUpdate();
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Hard delete failed for id: " + id, e);
+        }
+    }
+
+    @Override
+    public void hardDeleteByParentTemplateId(String parentTemplateId) {
+        if (parentTemplateId == null) return;
+        String sql = "DELETE FROM tasks WHERE parent_template_id = ?;";
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, parentTemplateId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Hard delete by parent template failed for: " + parentTemplateId, e);
         }
     }
 

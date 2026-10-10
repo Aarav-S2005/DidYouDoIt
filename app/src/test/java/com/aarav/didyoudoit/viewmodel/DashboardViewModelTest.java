@@ -1,6 +1,7 @@
 package com.aarav.didyoudoit.viewmodel;
 
 import com.aarav.didyoudoit.model.Priority;
+import com.aarav.didyoudoit.model.RecurrenceRule;
 import com.aarav.didyoudoit.model.Task;
 import com.aarav.didyoudoit.model.TaskCategory;
 import com.aarav.didyoudoit.model.TaskStatus;
@@ -16,6 +17,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -140,5 +142,28 @@ class DashboardViewModelTest {
         viewModel.deleteTask(saved).join();
 
         assertEquals(0, viewModel.getDisplayedTasks().size());
+    }
+
+    @Test
+    @DisplayName("Delete recurring task does not recreate on reload")
+    void testDeleteRecurringTaskDoesNotRecreate() {
+        Task habit = Task.builder()
+                .title("Drink 2L Water")
+                .recurrenceRule(RecurrenceRule.daily(LocalTime.of(9, 0)))
+                .build();
+        taskService.createTask(habit);
+
+        viewModel.reloadTasks().join();
+        assertEquals(1, viewModel.getDisplayedTasks().size());
+
+        Task instance = viewModel.getDisplayedTasks().get(0);
+        assertNotNull(instance.getParentTemplateId());
+
+        viewModel.deleteTask(instance).join();
+        assertEquals(0, viewModel.getDisplayedTasks().size(), "Task must be deleted immediately");
+
+        // Reload tasks again: must not resurrect or recreate instance
+        viewModel.reloadTasks().join();
+        assertEquals(0, viewModel.getDisplayedTasks().size(), "Task must NOT reappear upon subsequent reload");
     }
 }

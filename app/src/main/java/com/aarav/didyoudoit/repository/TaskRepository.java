@@ -78,7 +78,17 @@ public interface TaskRepository {
     void restore(String id);
 
     /**
+     * Soft-deletes all child task instances created from a specific parent template.
+     */
+    void deleteByParentTemplateId(String parentTemplateId);
+
+    /**
      * Permanently deletes a task record from database.
      */
     void hardDelete(String id);
+
+    /**
+     * Permanently deletes all child task instances created from a specific parent template.
+     */
+    void hardDeleteByParentTemplateId(String parentTemplateId);
 }

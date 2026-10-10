@@ -10,7 +10,7 @@ import java.util.Properties;
  */
 public final class AppVersion {
 
-    public static final String CURRENT_VERSION = "1.1.3";
+    public static final String CURRENT_VERSION = "1.1.4";
     private static String resolvedVersion;
 
     private AppVersion() {}

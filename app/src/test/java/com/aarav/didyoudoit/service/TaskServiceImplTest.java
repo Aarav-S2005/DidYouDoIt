@@ -215,4 +215,53 @@ class TaskServiceImplTest {
         Task completed = taskService.getTask(task.getId()).orElseThrow();
         assertEquals(TaskStatus.COMPLETED, completed.getStatus());
     }
+
+    @Test
+    @DisplayName("Deleting recurring task instance also deletes parent template")
+    void testDeleteRecurringInstanceDeletesParentTemplate() {
+        Task habit = Task.builder()
+                .title("Daily Journal")
+                .recurrenceRule(RecurrenceRule.daily(LocalTime.of(8, 0)))
+                .build();
+        taskService.createTask(habit);
+
+        List<Task> todayTasks = taskService.getTodayTasks();
+        assertEquals(1, todayTasks.size());
+        Task instance = todayTasks.get(0);
+        String templateId = instance.getParentTemplateId();
+        assertNotNull(templateId);
+
+        taskService.deleteTask(instance.getId());
+
+        // Instance is deleted
+        Task deletedInstance = taskService.getTask(instance.getId()).orElseThrow();
+        assertEquals(TaskStatus.DELETED, deletedInstance.getStatus());
+
+        // Template is also deleted
+        Task deletedTemplate = taskService.getTask(templateId).orElseThrow();
+        assertEquals(TaskStatus.DELETED, deletedTemplate.getStatus());
+
+        // Recurring engine does not regenerate it
+        List<Task> regenerated = recurringTaskEngine.generateDailyInstances(clockService.today());
+        assertTrue(regenerated.isEmpty(), "Must not regenerate instance for deleted template");
+    }
+
+    @Test
+    @DisplayName("updateTask does not resurrect a deleted task")
+    void testUpdateTaskDoesNotResurrectDeletedTask() {
+        Task task = taskService.createTask(Task.builder()
+                .title("Temporary Note")
+                .durationMinutes(15)
+                .build());
+
+        taskService.deleteTask(task.getId());
+        assertEquals(TaskStatus.DELETED, taskService.getTask(task.getId()).orElseThrow().getStatus());
+
+        // Simulate stale in-memory object being updated by background timer
+        task.setStatus(TaskStatus.PENDING);
+        taskService.updateTask(task);
+
+        assertEquals(TaskStatus.DELETED, taskService.getTask(task.getId()).orElseThrow().getStatus(),
+                "Status must remain DELETED even if stale updateTask is called");
+    }
 }
